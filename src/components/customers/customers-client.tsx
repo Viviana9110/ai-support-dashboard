@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import { CustomerForm } from './customer-form';
 import { Customer } from '@/services/customers/customers.types';
 import { CustomerFormData } from '@/lib/schemas/customer.schema';
+import { useToast } from '@/hooks/use-toast';
 
 export function CustomersClient() {
   const { data = [], isLoading, error } = useCustomers();
@@ -17,6 +18,8 @@ export function CustomersClient() {
   const [open, setOpen] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
+  const toast = useToast();
 
   useEffect(() => {
     setCustomers(data);
@@ -41,6 +44,7 @@ export function CustomersClient() {
     setCustomers((previousCustomers) => [...previousCustomers, newCustomer]);
 
     setOpen(false);
+    toast.success('Customer created', 'The customer was created successfully.');
   }
 
   function handleEditCustomer(data: CustomerFormData) {
@@ -59,6 +63,7 @@ export function CustomersClient() {
 
     setEditingCustomer(null);
     setOpen(false);
+    toast.info('Customer updated', 'The customer information was updated.');
   }
   if (isLoading) return <p>Loading...</p>;
 
@@ -85,6 +90,8 @@ export function CustomersClient() {
           setCustomers((previousCustomers) =>
             previousCustomers.filter((customer) => customer.id !== id),
           );
+
+          toast.warning('Customer deleted', 'The customer was removed.');
         }}
       />
 
