@@ -4,16 +4,32 @@ export function useToast() {
   const addToast = useToastStore((state) => state.addToast);
 
   return {
-    success: (title: string, description?: string) =>
-      addToast(title, "success", description),
+    success: (
+      title: string,
+      description?: string,
+      duration?: number
+    ) =>
+      addToast(title, "success", description, duration),
 
-    error: (title: string, description?: string) =>
-      addToast(title, "error", description),
+    error: (
+      title: string,
+      description?: string,
+      duration?: number
+    ) =>
+      addToast(title, "error", description, duration),
 
-    info: (title: string, description?: string) =>
-      addToast(title, "info", description),
+    info: (
+      title: string,
+      description?: string,
+      duration?: number
+    ) =>
+      addToast(title, "info", description, duration),
 
-    warning: (title: string, description?: string) =>
-      addToast(title, "warning", description),
+    warning: (
+      title: string,
+      description?: string,
+      duration?: number
+    ) =>
+      addToast(title, "warning", description, duration),
   };
 }

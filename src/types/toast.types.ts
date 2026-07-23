@@ -9,4 +9,5 @@ export interface Toast {
   title: string;
   description?: string;
   type: ToastType;
+   duration: number;
 }

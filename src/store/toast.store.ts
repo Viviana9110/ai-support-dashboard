@@ -8,7 +8,8 @@ interface ToastStore {
   addToast: (
     title: string,
     type: ToastType,
-    description?: string
+    description?: string,
+    duration?: number
   ) => void;
 
   removeToast: (id: number) => void;
@@ -17,7 +18,7 @@ interface ToastStore {
 export const useToastStore = create<ToastStore>((set) => ({
   toasts: [],
 
-  addToast: (title, type, description) => {
+  addToast: (title, type, description, duration = 4000) => {
     const id = Date.now();
 
     set((state) => ({
@@ -28,15 +29,12 @@ export const useToastStore = create<ToastStore>((set) => ({
           title,
           description,
           type,
+          duration
         },
       ],
     }));
 
-    setTimeout(() => {
-      set((state) => ({
-        toasts: state.toasts.filter((toast) => toast.id !== id),
-      }));
-    }, 4000);
+   
   },
 
   removeToast: (id) => {
