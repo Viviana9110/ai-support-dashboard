@@ -14,6 +14,8 @@ import { ResolutionTime } from "@/services/analytics/analytics.types";
 
 import { ChartCard } from "./chart-card";
 
+import { ChartTooltip } from "./chart-tooltip";
+
 interface ResolutionTimeChartProps {
   data: ResolutionTime[];
 }
@@ -37,7 +39,9 @@ export function ResolutionTimeChart({
 
           <YAxis />
 
-          <Tooltip />
+          <Tooltip
+  content={<ChartTooltip />}
+/>
 
           <Bar
             dataKey="minutes"

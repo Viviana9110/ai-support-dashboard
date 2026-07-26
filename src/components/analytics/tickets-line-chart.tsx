@@ -13,6 +13,9 @@ import {
 import { MonthlyTickets } from "@/services/analytics/analytics.types";
 
 import { ChartCard } from "./chart-card";
+import { ChartTooltip } from "./chart-tooltip";
+
+import { CHART_COLORS } from "@/lib/chart-colors";
 
 interface TicketsLineChartProps {
   data: MonthlyTickets[];
@@ -39,12 +42,14 @@ export function TicketsLineChart({
 
           <YAxis />
 
-          <Tooltip />
+          <Tooltip
+  content={<ChartTooltip />}
+/>
 
           <Line
             type="monotone"
             dataKey="tickets"
-            stroke="#2563eb"
+            stroke={CHART_COLORS.primary}
             strokeWidth={3}
             dot={{
               r: 5,

@@ -1,6 +1,7 @@
 "use client";
 
 import { LucideIcon, TrendingUp } from "lucide-react";
+import { AnimatedNumber } from "@/components/shared/animated-number";
 
 interface AnalyticsKpiCardProps {
   title: string;
@@ -24,7 +25,11 @@ export function AnalyticsKpiCard({
           </p>
 
           <h2 className="mt-2 text-3xl font-bold">
-            {value}
+            {typeof value === "number" ? (
+    <AnimatedNumber value={value} />
+  ) : (
+    value
+  )}
           </h2>
 
           <div className="mt-3 flex items-center gap-2">

@@ -10,6 +10,7 @@ import {
 
 import { TicketStatus } from "@/services/analytics/analytics.types";
 import { ChartCard } from "./chart-card";
+import { ChartTooltip } from "./chart-tooltip";
 
 interface TicketStatusChartProps {
   data: TicketStatus[];
@@ -50,7 +51,9 @@ export function TicketStatusChart({
             ))}
           </Pie>
 
-          <Tooltip />
+          <Tooltip
+  content={<ChartTooltip />}
+/>
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>
