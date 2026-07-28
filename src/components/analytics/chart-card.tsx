@@ -12,14 +12,25 @@ export function ChartCard({
   children,
 }: ChartCardProps) {
   return (
-    <div className="rounded-2xl border bg-white p-6 shadow-sm">
+    <div
+      className="
+        rounded-2xl
+        border
+        border-border
+        bg-card
+        p-6
+        shadow-sm
+        transition-colors
+        duration-300
+      "
+    >
       <div className="mb-6">
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-lg font-semibold text-card-foreground">
           {title}
         </h2>
 
         {subtitle && (
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-muted-foreground">
             {subtitle}
           </p>
         )}

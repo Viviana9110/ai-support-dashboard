@@ -33,18 +33,47 @@ export function TicketsLineChart({
         width="100%"
         height={320}
       >
-        <LineChart data={data}>
+        <LineChart
+          data={data}
+          margin={{
+            top: 10,
+            right: 20,
+            left: -10,
+            bottom: 0,
+          }}
+        >
           <CartesianGrid
+            stroke="hsl(var(--border))"
             strokeDasharray="3 3"
+            vertical={false}
           />
 
-          <XAxis dataKey="month" />
+          <XAxis
+            dataKey="month"
+            tick={{
+              fill: "hsl(var(--muted-foreground))",
+              fontSize: 13,
+            }}
+            tickLine={false}
+            axisLine={false}
+          />
 
-          <YAxis />
+          <YAxis
+            tick={{
+              fill: "hsl(var(--muted-foreground))",
+              fontSize: 13,
+            }}
+            tickLine={false}
+            axisLine={false}
+          />
 
           <Tooltip
-  content={<ChartTooltip />}
-/>
+            cursor={{
+              stroke: CHART_COLORS.primary,
+              strokeOpacity: 0.15,
+            }}
+            content={<ChartTooltip />}
+          />
 
           <Line
             type="monotone"
@@ -52,7 +81,16 @@ export function TicketsLineChart({
             stroke={CHART_COLORS.primary}
             strokeWidth={3}
             dot={{
-              r: 5,
+              r: 4,
+              fill: CHART_COLORS.primary,
+              strokeWidth: 2,
+              stroke: "hsl(var(--card))",
+            }}
+            activeDot={{
+              r: 6,
+              fill: CHART_COLORS.primary,
+              strokeWidth: 2,
+              stroke: "hsl(var(--background))",
             }}
           />
         </LineChart>
