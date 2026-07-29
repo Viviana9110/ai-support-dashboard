@@ -3,6 +3,7 @@ import {
   MessagesSquare,
   Ticket,
   Users,
+  BookOpen,
   BarChart3,
   Settings,
 } from 'lucide-react';
@@ -27,6 +28,11 @@ export const navigation = [
     label: 'Customers',
     href: '/customers',
     icon: Users,
+  },
+  {
+    label: 'Knowledge Base',
+    href: '/knowledge',
+    icon: BookOpen,
   },
   {
     label: 'Analytics',

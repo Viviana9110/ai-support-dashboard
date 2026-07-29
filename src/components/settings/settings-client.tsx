@@ -48,6 +48,7 @@ export function SettingsClient() {
       {tab === "security" && (
         <SecuritySettings />
       )}
+      
 
     </div>
   );
