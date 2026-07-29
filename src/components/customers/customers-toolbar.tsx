@@ -3,13 +3,11 @@
 interface CustomersToolbarProps {
   search: string;
   onSearchChange: (value: string) => void;
-  onNewCustomer: () => void;
 }
 
 export function CustomersToolbar({
   search,
   onSearchChange,
-  onNewCustomer,
 }: CustomersToolbarProps) {
   return (
     <div className="flex items-center justify-between">
@@ -21,7 +19,6 @@ export function CustomersToolbar({
       />
 
       <button
-        onClick={onNewCustomer}
         className="rounded-lg bg-black px-4 py-2 text-white transition hover:bg-neutral-800"
       >
         + New Customer

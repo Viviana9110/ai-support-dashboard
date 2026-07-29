@@ -7,15 +7,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar } from '@/components/ui/avatar';
 
 export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <Avatar className="cursor-pointer">
-          <AvatarFallback>VL</AvatarFallback>
-        </Avatar>
+        <Avatar
+    name="Viviana Londoño"
+    size="sm"
+/>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end">

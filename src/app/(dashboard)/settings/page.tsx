@@ -1,3 +1,9 @@
+import { SettingsClient } from "@/components/settings/settings-client";
+
 export default function SettingsPage() {
-  return <h1 className="text-3xl font-bold">Settings</h1>;
+  return (
+    <div className="space-y-8">
+      <SettingsClient />
+    </div>
+  );
 }
