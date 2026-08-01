@@ -4,6 +4,7 @@ import {
   Ticket,
   Users,
   BookOpen,
+  Bot,
   BarChart3,
   Settings,
 } from 'lucide-react';
@@ -33,6 +34,11 @@ export const navigation = [
     label: 'Knowledge Base',
     href: '/knowledge',
     icon: BookOpen,
+  },
+  {
+    label: 'AI',
+    href: '/ai',
+    icon: Bot,
   },
   {
     label: 'Analytics',

@@ -5,16 +5,17 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 
 import { useAI } from '@/hooks/use-ai';
+import { useConversations } from '@/hooks/use-conversations';
 
-import { ChatWindow } from './chat-window';
-import { PromptInput } from './prompt-input';
 import { PlaygroundHeader } from './playground-header';
 import { PlaygroundSidebar } from './playground-sidebar';
 import { ConversationList } from './conversation-list';
+import { ChatWindow } from './chat-window';
+import { PromptInput } from './prompt-input';
 
 import {
+  ChatConversation,
   ChatMessage,
-  Conversation,
 } from '@/services/ai/ai.types';
 
 export function AIPlayground() {
@@ -22,43 +23,48 @@ export function AIPlayground() {
 
   const [typing, setTyping] = useState(false);
 
-  const [assistant, setAssistant] = useState(
-    'Customer Support AI',
-  );
+  const [assistant, setAssistant] =
+    useState('Customer Support AI');
 
-  const [model, setModel] = useState('GPT-5');
+  const [model, setModel] =
+    useState('GPT-5');
 
   const [temperature, setTemperature] =
     useState(0.7);
 
-  const [conversations, setConversations] =
-    useState<Conversation[]>([]);
+  const {
+    conversations,
+    setConversations,
+    createConversation,
+  } = useConversations();
 
-  const [selectedConversationId, setSelectedConversationId] =
+  const [activeConversationId, setActiveConversationId] =
     useState('');
 
   useEffect(() => {
     if (!data.length) return;
 
-    const firstConversation: Conversation = {
+    if (conversations.length > 0) return;
+
+    const firstConversation: ChatConversation = {
       id: crypto.randomUUID(),
       title: 'New Chat',
-      updatedAt: new Date(),
+      createdAt: new Date(),
       messages: data,
     };
 
     setConversations([firstConversation]);
-    setSelectedConversationId(firstConversation.id);
-  }, [data]);
+    setActiveConversationId(firstConversation.id);
+  }, [data, conversations.length, setConversations]);
 
   const activeConversation = useMemo(() => {
     return conversations.find(
       (conversation) =>
-        conversation.id === selectedConversationId,
+        conversation.id === activeConversationId,
     );
-  }, [conversations, selectedConversationId]);
+  }, [conversations, activeConversationId]);
 
-  function handleSend(prompt: string) {
+  async function handleSend(prompt: string) {
     if (!activeConversation) return;
 
     const userMessage: ChatMessage = {
@@ -68,20 +74,21 @@ export function AIPlayground() {
       createdAt: new Date(),
     };
 
+    const updatedMessages = [
+      ...activeConversation.messages,
+      userMessage,
+    ];
+
     setConversations((previous) =>
       previous.map((conversation) =>
-        conversation.id === selectedConversationId
+        conversation.id === activeConversationId
           ? {
               ...conversation,
-              updatedAt: new Date(),
               title:
-                conversation.messages.length === 1
-                  ? prompt
+                conversation.messages.length <= 1
+                  ? prompt.slice(0, 35)
                   : conversation.title,
-              messages: [
-                ...conversation.messages,
-                userMessage,
-              ],
+              messages: updatedMessages,
             }
           : conversation,
       ),
@@ -89,56 +96,37 @@ export function AIPlayground() {
 
     setTyping(true);
 
-    setTimeout(() => {
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: generateFakeResponse(prompt),
-        createdAt: new Date(),
-      };
+    try {
+      const response = await sendMessage(prompt);
+       const assistantMessage: ChatMessage = {
+    id: crypto.randomUUID(),
+    role: 'assistant',
+    content: response.output,
+    createdAt: new Date(),
 
-      setConversations((previous) =>
+  };
+   setConversations((previous) =>
         previous.map((conversation) =>
-          conversation.id ===
-          selectedConversationId
+          conversation.id === activeConversationId
             ? {
                 ...conversation,
-                updatedAt: new Date(),
                 messages: [
-                  ...conversation.messages,
+                  ...updatedMessages,
                   assistantMessage,
                 ],
               }
             : conversation,
         ),
       );
-
+    } finally {
       setTyping(false);
-    }, 1200);
+    }   
   }
 
   function handleNewConversation() {
-    const conversation: Conversation = {
-      id: crypto.randomUUID(),
-      title: 'New Chat',
-      updatedAt: new Date(),
-      messages: [
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content:
-            'Hello 👋 How can I help you today?',
-          createdAt: new Date(),
-        },
-      ],
-    };
+    const id = createConversation();
 
-    setConversations((previous) => [
-      conversation,
-      ...previous,
-    ]);
-
-    setSelectedConversationId(conversation.id);
+    setActiveConversationId(id);
   }
 
   function handleClear() {
@@ -146,8 +134,7 @@ export function AIPlayground() {
 
     setConversations((previous) =>
       previous.map((conversation) =>
-        conversation.id ===
-        selectedConversationId
+        conversation.id === activeConversationId
           ? {
               ...conversation,
               messages: [],
@@ -167,70 +154,62 @@ export function AIPlayground() {
 
   return (
     <Card className="overflow-hidden">
-
       <PlaygroundHeader />
 
       <div className="flex h-[700px]">
-
-        <ConversationList
-          conversations={conversations}
-          selectedId={selectedConversationId}
-          onSelect={setSelectedConversationId}
-          onNewConversation={
-            handleNewConversation
-          }
-        />
+        <div className="w-72 border-r p-4">
+          <ConversationList
+            conversations={conversations}
+            activeId={activeConversationId}
+            onSelect={setActiveConversationId}
+            onNew={handleNewConversation}
+          />
+        </div>
 
         <PlaygroundSidebar
           assistant={assistant}
           model={model}
           temperature={temperature}
-          onAssistantChange={
-            setAssistant
-          }
+          onAssistantChange={setAssistant}
           onModelChange={setModel}
-          onTemperatureChange={
-            setTemperature
-          }
+          onTemperatureChange={setTemperature}
           onClear={handleClear}
         />
 
         <div className="flex flex-1 flex-col">
-
           <ChatWindow
-            messages={
-              activeConversation?.messages ??
-              []
-            }
+            messages={activeConversation?.messages ?? []}
             loading={typing}
           />
 
           <PromptInput
             onSend={handleSend}
           />
-
         </div>
-
       </div>
-
     </Card>
   );
 }
 
-function generateFakeResponse(prompt: string) {
-  const value = prompt.toLowerCase();
+//TODO: Replace with OpenAI API
+// function generateFakeResponse(prompt: string) {
+//   const value = prompt.toLowerCase();
 
-  if (value.includes('password')) {
-    return 'To reset your password, click on "Forgot password" from the login page.';
-  }
+//   if (value.includes('password')) {
+//     return 'To reset your password, click on "Forgot password" from the login page and follow the instructions.';
+//   }
 
-  if (value.includes('refund')) {
-    return 'Customers can request a refund within 30 days after purchase.';
-  }
+//   if (value.includes('refund')) {
+//     return 'Customers can request a refund within 30 days after purchase.';
+//   }
 
-  if (value.includes('hello')) {
-    return 'Hello 👋 How can I assist you today?';
-  }
+//   if (value.includes('hello')) {
+//     return 'Hello 👋 How can I assist you today?';
+//   }
 
-  return `You asked: "${prompt}". Later this response will come from OpenAI.`;
-}
+//   if (value.includes('ticket')) {
+//     return 'I can help you create, update or resolve support tickets.';
+//   }
+
+//   return `You asked: "${prompt}". Later this response will come directly from OpenAI.`;
+// }

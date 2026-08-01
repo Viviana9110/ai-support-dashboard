@@ -14,6 +14,7 @@ export const initialConversations: Conversation[] = [
   {
     id: "1",
     title: "Welcome",
+    createdAt: new Date(),
     updatedAt: new Date(),
     messages: initialMessages,
   },

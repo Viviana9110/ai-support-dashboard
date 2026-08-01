@@ -12,6 +12,20 @@ export interface ChatMessage {
 export interface Conversation {
   id: string;
   title: string;
-  updatedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;  
   messages: ChatMessage[];
+}
+
+export interface ChatConversation {
+  id: string;
+  title: string;
+
+  createdAt: Date;
+
+  messages: ChatMessage[];
+
+  pinned?: boolean;
+
+  favorite?: boolean;
 }

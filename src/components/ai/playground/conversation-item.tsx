@@ -1,43 +1,81 @@
 'use client';
 
-import { MessageSquare } from 'lucide-react';
+import {
+  MessageSquare,
+  MoreHorizontal,
+  Pencil,
+  Pin,
+  Star,
+  Trash2,
+} from 'lucide-react';
 
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
-import { Conversation } from '@/services/ai/ai.types';
+import { ChatConversation } from '@/services/ai/ai.types';
+
+import { formatRelativeDate } from '@/lib/date';
 
 interface Props {
-  conversation: Conversation;
-  selected: boolean;
-  onClick: () => void;
+  conversation: ChatConversation;
+  active: boolean;
+  onSelect: () => void;
 }
 
 export function ConversationItem({
   conversation,
-  selected,
-  onClick,
+  active,
+  onSelect,
 }: Props) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors',
-        selected
-          ? 'bg-primary text-primary-foreground'
-          : 'hover:bg-muted',
-      )}
+    <div
+      onClick={onSelect}
+      className={`
+        group
+        cursor-pointer
+        rounded-xl
+        border
+        p-3
+        transition-all
+        ${
+          active
+            ? 'border-primary bg-primary/10'
+            : 'hover:bg-muted'
+        }
+      `}
     >
-      <MessageSquare size={18} />
+      <div className="flex items-start justify-between">
+        <div className="flex gap-3">
+          <MessageSquare
+            size={18}
+            className="mt-1"
+          />
 
-      <div className="min-w-0">
-        <p className="truncate font-medium">
-          {conversation.title}
-        </p>
+          <div>
+            <p className="line-clamp-1 font-medium">
+              {conversation.title}
+            </p>
 
-        <p className="text-xs opacity-70">
-          {conversation.messages.length} messages
-        </p>
+            <p className="text-muted-foreground text-xs">
+  {conversation.messages.length} messages •{' '}
+  {formatRelativeDate(
+    conversation.createdAt,
+  )}
+</p>
+          </div>
+        </div>
+
+        <Button
+          size="icon"
+          variant="ghost"
+          className="
+            opacity-0
+            transition-opacity
+            group-hover:opacity-100
+          "
+        >
+          <MoreHorizontal size={16} />
+        </Button>
       </div>
-    </button>
+    </div>
   );
 }
