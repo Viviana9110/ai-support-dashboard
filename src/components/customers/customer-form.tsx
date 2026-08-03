@@ -1,43 +1,78 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
 import {
   customerSchema,
-  CustomerFormData,
 } from '@/lib/schemas/customer.schema';
 
-import { Customer } from '@/services/customers/customers.types';
+import type { CustomerFormData } from '@/lib/schemas/customer.schema';
+import type { Customer } from '@/services/customers/customers.types';
 
 interface CustomerFormProps {
   customer?: Customer;
+  isSubmitting: boolean;
+  submitError: string | null;
+  onCancel: () => void;
   onSubmit: (data: CustomerFormData) => void;
 }
 
-export function CustomerForm({ customer, onSubmit }: CustomerFormProps) {
+export function CustomerForm({
+  customer,
+  isSubmitting,
+  submitError,
+  onCancel,
+  onSubmit,
+}: CustomerFormProps) {
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
-      name: customer?.name ?? '',
-      email: customer?.email ?? '',
-      company: customer?.company ?? '',
-      status: customer?.status ?? 'Active',
+      name: '',
+      email: '',
+      company: '',
+      status: 'Active',
     },
   });
+
+  useEffect(() => {
+    if (!customer) {
+      reset({
+        name: '',
+        email: '',
+        company: '',
+        status: 'Active',
+      });
+      return;
+    }
+
+    reset({
+      name: customer.name,
+      email: customer.email,
+      company: customer.company,
+      status: customer.status,
+    });
+  }, [customer, reset]);
+
+  const isEditing = !!customer;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div>
         <label className="mb-1 block text-sm font-medium">Name</label>
 
-        <input
+        <Input
           {...register('name')}
-          className="w-full rounded-lg border px-4 py-2"
+          placeholder="Customer full name"
         />
 
         {errors.name && (
@@ -48,9 +83,9 @@ export function CustomerForm({ customer, onSubmit }: CustomerFormProps) {
       <div>
         <label className="mb-1 block text-sm font-medium">Email</label>
 
-        <input
+        <Input
           {...register('email')}
-          className="w-full rounded-lg border px-4 py-2"
+          placeholder="name@company.com"
         />
 
         {errors.email && (
@@ -61,9 +96,9 @@ export function CustomerForm({ customer, onSubmit }: CustomerFormProps) {
       <div>
         <label className="mb-1 block text-sm font-medium">Company</label>
 
-        <input
+        <Input
           {...register('company')}
-          className="w-full rounded-lg border px-4 py-2"
+          placeholder="Company name"
         />
 
         {errors.company && (
@@ -84,13 +119,31 @@ export function CustomerForm({ customer, onSubmit }: CustomerFormProps) {
         </select>
       </div>
 
+      {submitError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+          {submitError}
+        </p>
+      )}
+
       <div className="flex justify-end gap-3">
-        <button
-          type="submit"
-          className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700"
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSubmitting}
         >
-          Save Customer
-        </button>
+          Cancel
+        </Button>
+
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting
+            ? isEditing
+              ? 'Saving...'
+              : 'Creating...'
+            : isEditing
+              ? 'Save Changes'
+              : 'Create Customer'}
+        </Button>
       </div>
     </form>
   );

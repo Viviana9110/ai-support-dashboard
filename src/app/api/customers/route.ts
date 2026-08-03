@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { customerSchema } from '@/lib/schemas/customer.schema';
 import { serializeCustomer, toDBCustomerStatus } from '@/lib/serializers';
-
-import type { CustomerStatus } from '@/services/customers/customers.types';
 
 export async function GET() {
   const customers = await prisma.customer.findMany({
+    where: { deletedAt: null },
     orderBy: { name: 'asc' },
   });
 
@@ -16,16 +16,41 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = await request.json();
 
-  const customer = await prisma.customer.create({
-    data: {
-      name: body.name,
-      email: body.email,
-      company: body.company,
-      status: body.status
-        ? toDBCustomerStatus(body.status as CustomerStatus)
-        : 'ACTIVE',
-    },
-  });
+  const parsed = customerSchema.safeParse(body);
 
-  return NextResponse.json(serializeCustomer(customer), { status: 201 });
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? 'Invalid customer data' },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const customer = await prisma.customer.create({
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email,
+        company: parsed.data.company,
+        status: toDBCustomerStatus(parsed.data.status),
+      },
+    });
+
+    return NextResponse.json(serializeCustomer(customer), { status: 201 });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    ) {
+      return NextResponse.json(
+        { error: 'A customer with this email already exists' },
+        { status: 400 },
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to create customer' },
+      { status: 500 },
+    );
+  }
 }

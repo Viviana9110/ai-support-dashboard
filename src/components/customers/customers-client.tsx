@@ -1,23 +1,29 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Users } from 'lucide-react';
 
-import { useCustomers } from '@/hooks/use-customers';
+import {
+  useCreateCustomer,
+  useCustomers,
+  useDeleteCustomer,
+  useUpdateCustomer,
+} from '@/hooks/use-customers';
 import { useToast } from '@/hooks/use-toast';
 
-import { Customer } from '@/services/customers/customers.types';
-import { CustomerFormData } from '@/lib/schemas/customer.schema';
+import type { Customer } from '@/services/customers/customers.types';
+import type { CustomerFormData } from '@/lib/schemas/customer.schema';
+import { getApiErrorMessage } from '@/services/api';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Modal } from '@/components/ui/modal';
 import { PageHeader } from '@/components/ui/page-header';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 import { CustomerForm } from './customer-form';
 import { CustomersTable } from './customers-table';
 import { CustomersToolbar } from './customers-toolbar';
-import { ConfirmDialog } from '../ui/confirm-dialog';
 import { CustomersTableSkeleton } from './customers-table-skeleton';
 
 export function CustomersClient() {
@@ -26,6 +32,9 @@ export function CustomersClient() {
   /* -------------------------------------------------------------------------- */
 
   const { data = [], isLoading, error } = useCustomers();
+  const createCustomer = useCreateCustomer();
+  const updateCustomer = useUpdateCustomer();
+  const deleteCustomer = useDeleteCustomer();
   const toast = useToast();
 
   /* -------------------------------------------------------------------------- */
@@ -34,99 +43,114 @@ export function CustomersClient() {
 
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
     null,
   );
 
   /* -------------------------------------------------------------------------- */
-  /*                                   Effects                                  */
-  /* -------------------------------------------------------------------------- */
-
-  useEffect(() => {
-    setCustomers(data);
-  }, [data]);
-
-  /* -------------------------------------------------------------------------- */
   /*                                     Memo                                   */
   /* -------------------------------------------------------------------------- */
 
   const filteredCustomers = useMemo(() => {
-    return customers.filter((customer) => {
+    return data.filter((customer) => {
       return (
         customer.name.toLowerCase().includes(search.toLowerCase()) ||
         customer.email.toLowerCase().includes(search.toLowerCase()) ||
         customer.company.toLowerCase().includes(search.toLowerCase())
       );
     });
-  }, [customers, search]);
+  }, [data, search]);
 
   /* -------------------------------------------------------------------------- */
   /*                                  Handlers                                  */
   /* -------------------------------------------------------------------------- */
 
   function handleOpenCreateModal() {
+    setSubmitError(null);
     setEditingCustomer(null);
     setOpen(true);
   }
 
   function handleCloseModal() {
+    if (createCustomer.isPending || updateCustomer.isPending) return;
+
+    setSubmitError(null);
     setEditingCustomer(null);
     setOpen(false);
   }
 
   function handleEdit(customer: Customer) {
+    setSubmitError(null);
     setEditingCustomer(customer);
     setOpen(true);
   }
 
-  function handleCreateCustomer(data: CustomerFormData) {
-    const newCustomer: Customer = {
-      id: crypto.randomUUID(),
-      ...data,
-    };
+  async function handleCreateCustomer(data: CustomerFormData) {
+    setSubmitError(null);
 
-    setCustomers((previousCustomers) => [...previousCustomers, newCustomer]);
+    try {
+      await createCustomer.mutateAsync(data);
 
-    setOpen(false);
+      setOpen(false);
 
-    toast.success('Customer created', 'The customer was created successfully.');
+      toast.success(
+        'Customer created',
+        'The customer was created successfully.',
+      );
+    } catch (error) {
+      setSubmitError(
+        getApiErrorMessage(
+          error,
+          'Something went wrong while creating the customer.',
+        ),
+      );
+
+      toast.error('Failed to create customer', 'Something went wrong.');
+    }
   }
 
-  function handleEditCustomer(data: CustomerFormData) {
+  async function handleEditCustomer(data: CustomerFormData) {
     if (!editingCustomer) return;
 
-    setCustomers((previousCustomers) =>
-      previousCustomers.map((customer) =>
-        customer.id === editingCustomer.id
-          ? {
-              ...customer,
-              ...data,
-            }
-          : customer,
-      ),
-    );
+    setSubmitError(null);
 
-    setEditingCustomer(null);
-    setOpen(false);
+    try {
+      await updateCustomer.mutateAsync({
+        id: editingCustomer.id,
+        payload: data,
+      });
 
-    toast.info('Customer updated', 'The customer information was updated.');
+      setEditingCustomer(null);
+      setOpen(false);
+
+      toast.success('Customer updated', 'The customer information was updated.');
+    } catch (error) {
+      setSubmitError(
+        getApiErrorMessage(
+          error,
+          'Something went wrong while updating the customer.',
+        ),
+      );
+
+      toast.error('Failed to update customer', 'Something went wrong.');
+    }
   }
 
-  function confirmDeleteCustomer() {
+  async function handleDeleteCustomer() {
     if (!customerToDelete) return;
 
-    setCustomers((previousCustomers) =>
-      previousCustomers.filter(
-        (customer) => customer.id !== customerToDelete.id,
-      ),
-    );
+    try {
+      await deleteCustomer.mutateAsync(customerToDelete.id);
 
-    toast.warning('Customer deleted', 'The customer was removed.');
+      setCustomerToDelete(null);
 
-    setCustomerToDelete(null);
+      toast.success('Customer deleted', 'The customer was deleted successfully.');
+    } catch {
+      toast.error('Failed to delete customer', 'Something went wrong.');
+    }
   }
 
   /* -------------------------------------------------------------------------- */
@@ -135,7 +159,7 @@ export function CustomersClient() {
 
   if (isLoading) {
     return <CustomersTableSkeleton />;
-}
+  }
 
   if (error) return <p>Something went wrong.</p>;
 
@@ -147,7 +171,11 @@ export function CustomersClient() {
         actions={<Button onClick={handleOpenCreateModal}>New Customer</Button>}
       />
 
-      <CustomersToolbar search={search} onSearchChange={setSearch} />
+      <CustomersToolbar
+        search={search}
+        onSearchChange={setSearch}
+        onNewCustomer={handleOpenCreateModal}
+      />
 
       {filteredCustomers.length === 0 ? (
         <EmptyState
@@ -161,7 +189,7 @@ export function CustomersClient() {
           customers={filteredCustomers}
           onEdit={handleEdit}
           onDelete={(id) => {
-            const customer = customers.find((customer) => customer.id === id);
+            const customer = data.find((customer) => customer.id === id);
 
             if (customer) {
               setCustomerToDelete(customer);
@@ -177,6 +205,9 @@ export function CustomersClient() {
       >
         <CustomerForm
           customer={editingCustomer ?? undefined}
+          isSubmitting={createCustomer.isPending || updateCustomer.isPending}
+          submitError={submitError}
+          onCancel={handleCloseModal}
           onSubmit={(data) => {
             if (editingCustomer) {
               handleEditCustomer(data);
@@ -186,15 +217,17 @@ export function CustomersClient() {
           }}
         />
       </Modal>
+
       <ConfirmDialog
         open={!!customerToDelete}
         title="Delete Customer"
-        description={`Are you sure you want to delete "${customerToDelete?.name}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${customerToDelete?.name}"? This action can be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
         variant="destructive"
+        loading={deleteCustomer.isPending}
         onCancel={() => setCustomerToDelete(null)}
-        onConfirm={confirmDeleteCustomer}
+        onConfirm={handleDeleteCustomer}
       />
     </div>
   );

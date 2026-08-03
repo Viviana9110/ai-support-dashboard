@@ -10,4 +10,7 @@ export const customerSchema = z.object({
   status: z.enum(['Active', 'Inactive']),
 });
 
+export const customerUpdateSchema = customerSchema.partial();
+
 export type CustomerFormData = z.infer<typeof customerSchema>;
+export type CustomerUpdateData = z.infer<typeof customerUpdateSchema>;
