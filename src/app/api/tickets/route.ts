@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { getActorId, writeAuditLog } from '@/lib/audit';
 import {
   serializeTicket,
   toDBTicketPriority,
@@ -34,10 +34,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const session = await getSession();
-
-  const createdById =
-    session?.sub ?? (await prisma.user.findFirst())?.id;
+  const createdById = await getActorId();
 
   if (!createdById) {
     return NextResponse.json(
@@ -49,16 +46,34 @@ export async function POST(request: Request) {
   const data = parsed.data;
 
   try {
-    const ticket = await prisma.ticket.create({
-      data: {
-        subject: data.subject,
-        status: toDBTicketStatus(data.status),
-        priority: toDBTicketPriority(data.priority),
-        customerId: data.customerId,
-        agentId: data.agentId ?? null,
-        createdById,
-      },
-      include: { customer: true, agent: true },
+    const ticket = await prisma.$transaction(async (tx) => {
+      const created = await tx.ticket.create({
+        data: {
+          subject: data.subject,
+          status: toDBTicketStatus(data.status),
+          priority: toDBTicketPriority(data.priority),
+          customerId: data.customerId,
+          agentId: data.agentId ?? null,
+          createdById,
+        },
+        include: { customer: true, agent: true },
+      });
+
+      await writeAuditLog(tx, {
+        entity: 'Ticket',
+        entityId: created.id,
+        action: 'created',
+        userId: createdById,
+        metadata: {
+          subject: created.subject,
+          status: created.status,
+          priority: created.priority,
+          customerId: created.customerId,
+          agentId: created.agentId,
+        },
+      });
+
+      return created;
     });
 
     return NextResponse.json(serializeTicket(ticket), { status: 201 });

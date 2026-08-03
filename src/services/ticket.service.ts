@@ -1,5 +1,5 @@
 import { api } from './api';
-import type { Ticket } from './ticket.types';
+import type { Ticket, TicketDetail } from './ticket.types';
 import type {
   TicketFormData,
   TicketUpdateData,
@@ -17,6 +17,12 @@ export async function getTickets(): Promise<Ticket[]> {
 
 export async function getTicket(id: string): Promise<Ticket> {
   const { data } = await api.get<Ticket>(`/tickets/${id}`);
+
+  return data;
+}
+
+export async function getTicketDetail(id: string): Promise<TicketDetail> {
+  const { data } = await api.get<TicketDetail>(`/tickets/${id}`);
 
   return data;
 }

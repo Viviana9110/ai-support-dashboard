@@ -23,6 +23,8 @@ import type {
 
 import type {
   Ticket,
+  TicketActivity,
+  TicketDetail,
   TicketPriority,
   TicketStatus,
 } from '@/services/ticket.types';
@@ -33,13 +35,13 @@ import {
   formatTime,
 } from '@/lib/relative-time';
 
-const TICKET_STATUS: Record<DBTicketStatus, TicketStatus> = {
+export const TICKET_STATUS: Record<DBTicketStatus, TicketStatus> = {
   OPEN: 'Open',
   PENDING: 'Pending',
   CLOSED: 'Closed',
 };
 
-const TICKET_PRIORITY: Record<DBTicketPriority, TicketPriority> = {
+export const TICKET_PRIORITY: Record<DBTicketPriority, TicketPriority> = {
   LOW: 'Low',
   MEDIUM: 'Medium',
   HIGH: 'High',
@@ -98,6 +100,7 @@ export function serializeTicket(dbTicket: {
   priority: DBTicketPriority;
   customer: { id: string; name: string };
   agent: { id: string; name: string } | null;
+  createdAt: Date;
   updatedAt: Date;
 }): Ticket {
   return {
@@ -109,7 +112,49 @@ export function serializeTicket(dbTicket: {
     priority: TICKET_PRIORITY[dbTicket.priority],
     agent: dbTicket.agent?.name ?? '',
     agentId: dbTicket.agent?.id ?? null,
+    createdAt: formatRelativeTime(dbTicket.createdAt),
     updatedAt: formatRelativeTime(dbTicket.updatedAt),
+  };
+}
+
+export function serializeAuditLog(dbLog: {
+  id: string;
+  action: string;
+  metadata: unknown;
+  createdAt: Date;
+  user: { name: string } | null;
+}): TicketActivity {
+  return {
+    id: dbLog.id,
+    action: dbLog.action,
+    metadata: (dbLog.metadata as Record<string, unknown> | null) ?? null,
+    createdAt: formatRelativeTime(dbLog.createdAt),
+    user: dbLog.user?.name ?? null,
+  };
+}
+
+export function serializeTicketDetail(
+  dbTicket: {
+    id: string;
+    subject: string;
+    status: DBTicketStatus;
+    priority: DBTicketPriority;
+    customer: { id: string; name: string };
+    agent: { id: string; name: string } | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  activity: {
+    id: string;
+    action: string;
+    metadata: unknown;
+    createdAt: Date;
+    user: { name: string } | null;
+  }[],
+): TicketDetail {
+  return {
+    ...serializeTicket(dbTicket),
+    activity: activity.map(serializeAuditLog),
   };
 }
 

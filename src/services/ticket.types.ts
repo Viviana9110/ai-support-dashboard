@@ -11,5 +11,18 @@ export interface Ticket {
   priority: TicketPriority;
   agent: string;
   agentId: string | null;
+  createdAt: string;
   updatedAt: string;
+}
+
+export interface TicketActivity {
+  id: string;
+  action: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  user: string | null;
+}
+
+export interface TicketDetail extends Ticket {
+  activity: TicketActivity[];
 }

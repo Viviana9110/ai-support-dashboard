@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createTicket, deleteTicket, getTickets, restoreTicket, updateTicket } from '@/services/ticket.service';
+import { createTicket, deleteTicket, getTicketDetail, getTickets, restoreTicket, updateTicket } from '@/services/ticket.service';
 
 import type { Ticket } from '@/services/ticket.types';
 import type { UpdateTicketPayload } from '@/services/ticket.service';
@@ -13,6 +13,13 @@ export function useTickets() {
   return useQuery({
     queryKey: ['tickets'],
     queryFn: getTickets,
+  });
+}
+
+export function useTicketDetail(id: string) {
+  return useQuery({
+    queryKey: ['tickets', id],
+    queryFn: () => getTicketDetail(id),
   });
 }
 

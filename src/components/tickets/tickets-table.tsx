@@ -5,6 +5,7 @@ import { TicketBadge } from './ticket-badge';
 
 import { getPriorityVariant, getStatusVariant } from '@/lib/ticket-utils';
 import { ArrowUpDown, Pencil, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 
 interface TicketsTableProps {
   tickets: Ticket[];
@@ -89,7 +90,14 @@ export function TicketsTable({
             <tr key={ticket.id} className="border-b hover:bg-gray-50">
               <td className="p-4">{ticket.id}</td>
               <td className="p-4">{ticket.customer}</td>
-              <td className="p-4">{ticket.subject}</td>
+              <td className="p-4">
+                <Link
+                  href={`/tickets/${ticket.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {ticket.subject}
+                </Link>
+              </td>
               <td className="p-4">
                 <TicketBadge variant={getStatusVariant(ticket.status)}>
                   {ticket.status}
