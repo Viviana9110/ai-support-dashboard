@@ -8,6 +8,7 @@ interface TicketsToolbarProps {
   onSearchChange: (value: string) => void;
   onStatusChange: (value: string) => void;
   onPriorityChange: (value: string) => void;
+  onNewTicket: () => void;
 }
 
 export function TicketsToolbar({
@@ -17,6 +18,7 @@ export function TicketsToolbar({
   onSearchChange,
   onStatusChange,
   onPriorityChange,
+  onNewTicket,
 }: TicketsToolbarProps) {
   return (
     <div className="flex items-center justify-between gap-4">
@@ -51,7 +53,10 @@ export function TicketsToolbar({
         </select>
       </div>
 
-      <button className="rounded-lg bg-black px-4 py-2 text-white">
+      <button
+        onClick={onNewTicket}
+        className="rounded-lg bg-black px-4 py-2 text-white"
+      >
         New Ticket
       </button>
     </div>

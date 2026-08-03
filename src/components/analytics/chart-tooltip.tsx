@@ -1,8 +1,13 @@
 "use client";
 
+interface ChartTooltipPayloadItem {
+  color?: string;
+  value?: string | number;
+}
+
 interface ChartTooltipProps {
   active?: boolean;
-  payload?: any[];
+  payload?: ChartTooltipPayloadItem[];
   label?: string;
 }
 

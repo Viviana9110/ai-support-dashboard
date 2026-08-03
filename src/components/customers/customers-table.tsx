@@ -7,7 +7,7 @@ import { CustomerRow } from './customer-row';
 interface CustomersTableProps {
   customers: Customer[];
   onEdit: (customer: Customer) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export function CustomersTable({

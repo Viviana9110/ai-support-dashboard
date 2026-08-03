@@ -15,10 +15,10 @@ export function Markdown({ children }: Props) {
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       components={{
-        code({ inline, className, children, ...props }) {
+        code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '');
 
-          if (!inline && match) {
+          if (match) {
             return (
               <SyntaxHighlighter
                 style={oneDark}

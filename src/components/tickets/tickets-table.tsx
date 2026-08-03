@@ -4,23 +4,21 @@ import { Ticket } from '@/services/ticket.types';
 import { TicketBadge } from './ticket-badge';
 
 import { getPriorityVariant, getStatusVariant } from '@/lib/ticket-utils';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Pencil, Trash2 } from 'lucide-react';
 
 interface TicketsTableProps {
   tickets: Ticket[];
 
   sortBy: (key: keyof Ticket) => void;
-
-  sortKey: keyof Ticket | null;
-
-  direction: 'asc' | 'desc';
+  onEdit: (ticket: Ticket) => void;
+  onDelete: (ticket: Ticket) => void;
 }
 
 export function TicketsTable({
   tickets,
   sortBy,
-  sortKey,
-  direction,
+  onEdit,
+  onDelete,
 }: TicketsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-white">
@@ -75,13 +73,14 @@ export function TicketsTable({
             </th>
             <th className="p-4 text-left">
               <button
-                onClick={() => sortBy('updated')}
+                onClick={() => sortBy('updatedAt')}
                 className="flex items-center gap-2 font-semibold"
               >
                 Updated
                 <ArrowUpDown size={16} />
               </button>
             </th>
+            <th className="p-4 text-left">Actions</th>
           </tr>
         </thead>
 
@@ -103,6 +102,23 @@ export function TicketsTable({
               </td>
               <td className="p-4">{ticket.agent}</td>
               <td className="p-4">{ticket.updatedAt}</td>
+              <td className="p-4">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => onEdit(ticket)}
+                    className="rounded p-2 hover:bg-gray-100"
+                  >
+                    <Pencil size={16} />
+                  </button>
+
+                  <button
+                    onClick={() => onDelete(ticket)}
+                    className="rounded p-2 hover:bg-red-100"
+                  >
+                    <Trash2 size={16} className="text-red-600" />
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>

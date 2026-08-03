@@ -84,7 +84,7 @@ export function CustomersClient() {
 
   function handleCreateCustomer(data: CustomerFormData) {
     const newCustomer: Customer = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       ...data,
     };
 
@@ -113,14 +113,6 @@ export function CustomersClient() {
     setOpen(false);
 
     toast.info('Customer updated', 'The customer information was updated.');
-  }
-
-  function handleDeleteCustomer(id: number) {
-    setCustomers((previousCustomers) =>
-      previousCustomers.filter((customer) => customer.id !== id),
-    );
-
-    toast.warning('Customer deleted', 'The customer was removed.');
   }
 
   function confirmDeleteCustomer() {

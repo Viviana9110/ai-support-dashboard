@@ -1,6 +1,6 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: 'https://dummyjson.com',
-  timeout: 5000,
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? '/api',
+  timeout: 10000,
 });

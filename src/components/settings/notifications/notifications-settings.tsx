@@ -21,7 +21,7 @@ import {
 import { defaultNotifications } from '@/constants/notifications';
 
 import { NotificationGroup } from './notification-group';
-import { SettingsSwitch } from '../appearance/settings-switch';
+import { NotificationSwitch } from './notification-switch';
 import { DigestSelector } from './digest-selector';
 
 import { useToast } from '@/hooks/use-toast';
@@ -73,7 +73,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="newTickets"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="New Tickets"
                     description="Receive an email when a new ticket is created."
                     checked={field.value}
@@ -86,7 +86,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="customerReplies"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="Customer Replies"
                     description="Notify me when customers reply."
                     checked={field.value}
@@ -99,7 +99,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="weeklySummary"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="Weekly Summary"
                     description="Receive a weekly report."
                     checked={field.value}
@@ -112,7 +112,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="productUpdates"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="Product Updates"
                     description="Receive product announcements."
                     checked={field.value}
@@ -135,7 +135,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="desktop"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="Desktop"
                     description="Enable desktop notifications."
                     checked={field.value}
@@ -148,7 +148,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="mobile"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="Mobile"
                     description="Enable mobile notifications."
                     checked={field.value}
@@ -171,7 +171,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="mentions"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="Mentions"
                     description="Notify when someone mentions you."
                     checked={field.value}
@@ -184,7 +184,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="assignedTickets"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="Assigned Tickets"
                     description="Notify when tickets are assigned."
                     checked={field.value}
@@ -197,7 +197,7 @@ export function NotificationsSettings() {
                 control={control}
                 name="aiSuggestions"
                 render={({ field }) => (
-                  <SettingsSwitch
+                  <NotificationSwitch
                     label="AI Suggestions"
                     description="Receive AI recommendations."
                     checked={field.value}

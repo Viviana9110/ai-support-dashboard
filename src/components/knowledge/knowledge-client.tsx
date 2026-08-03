@@ -59,7 +59,7 @@ export function KnowledgeClient() {
 
   function handleCreate(data: ArticleFormData) {
     const article: KnowledgeArticle = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       ...data,
       author: 'Viviana',
       updatedAt: new Date().toLocaleDateString(),
@@ -102,7 +102,7 @@ export function KnowledgeClient() {
     setOpen(false);
   }
 
-  function handleDelete(id: number) {
+  function handleDelete(id: string) {
     setArticles((previous) =>
       previous.filter(
         (article) => article.id !== id,

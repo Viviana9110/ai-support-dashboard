@@ -1,12 +1,12 @@
 export interface Message {
-  id: number;
+  id: string;
   sender: 'customer' | 'agent';
   text: string;
   time: string;
 }
 
 export interface Conversation {
-  id: number;
+  id: string;
   customer: string;
   avatar: string;
   online: boolean;

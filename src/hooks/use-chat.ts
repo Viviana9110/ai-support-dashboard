@@ -26,7 +26,7 @@ export function useChat(conversation: Conversation) {
     if (!text.trim()) return;
 
     const newMessage: Message = {
-      id: Date.now(),
+      id: crypto.randomUUID(),
       sender: 'customer',
       text,
       time: new Date().toLocaleTimeString([], {
@@ -43,7 +43,7 @@ export function useChat(conversation: Conversation) {
 
     setTimeout(() => {
       const reply: Message = {
-        id: Date.now() + 1,
+        id: crypto.randomUUID(),
         sender: 'agent',
         text: "Thanks for contacting support! I'm reviewing your request.",
         time: new Date().toLocaleTimeString([], {

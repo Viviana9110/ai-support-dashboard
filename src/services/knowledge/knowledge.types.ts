@@ -4,7 +4,7 @@ export type ArticleStatus =
   | 'archived';
 
 export interface KnowledgeArticle {
-  id: number;
+  id: string;
   title: string;
   slug: string;
   category: string;

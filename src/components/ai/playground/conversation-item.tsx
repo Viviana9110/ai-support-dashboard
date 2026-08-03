@@ -3,10 +3,6 @@
 import {
   MessageSquare,
   MoreHorizontal,
-  Pencil,
-  Pin,
-  Star,
-  Trash2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';

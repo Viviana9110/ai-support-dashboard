@@ -1,7 +1,7 @@
 export type CustomerStatus = 'Active' | 'Inactive';
 
 export interface Customer {
-  id: number;
+  id: string;
   name: string;
   email: string;
   company: string;

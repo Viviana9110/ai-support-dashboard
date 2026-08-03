@@ -7,7 +7,7 @@ import { Customer } from '@/services/customers/customers.types';
 interface CustomerRowProps {
   customer: Customer;
   onEdit: (customer: Customer) => void;
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export function CustomerRow({ customer, onEdit, onDelete }: CustomerRowProps) {

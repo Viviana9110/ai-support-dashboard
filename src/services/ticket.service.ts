@@ -1,46 +1,49 @@
-import { Ticket } from './ticket.types';
+import { api } from './api';
+import type { Ticket } from './ticket.types';
+import type {
+  TicketFormData,
+  TicketUpdateData,
+} from '@/lib/schemas/ticket.schema';
 
-const tickets: Ticket[] = [
-  {
-    id: 1023,
-    customer: 'John Doe',
-    subject: 'Login issue',
-    status: 'Open',
-    priority: 'High',
-    agent: 'Sophia',
-    updatedAt: '5 min ago',
-  },
-  {
-    id: 1024,
-    customer: 'Sarah Lee',
-    subject: 'Payment failed',
-    status: 'Pending',
-    priority: 'Medium',
-    agent: 'Michael',
-    updatedAt: '20 min ago',
-  },
-  {
-    id: 1025,
-    customer: 'Emily Brown',
-    subject: 'Refund request',
-    status: 'Closed',
-    priority: 'Low',
-    agent: 'David',
-    updatedAt: 'Yesterday',
-  },
-  {
-    id: 1026,
-    customer: 'Carlos Ruiz',
-    subject: 'AI generated wrong answer',
-    status: 'Open',
-    priority: 'High',
-    agent: 'Sophia',
-    updatedAt: '1 hour ago',
-  },
-];
+export type CreateTicketPayload = TicketFormData;
 
-export async function getTickets() {
-  await new Promise((resolve) => setTimeout(resolve, 500));
+export type UpdateTicketPayload = TicketUpdateData;
 
-  return tickets;
+export async function getTickets(): Promise<Ticket[]> {
+  const { data } = await api.get<Ticket[]>('/tickets');
+
+  return data;
+}
+
+export async function getTicket(id: string): Promise<Ticket> {
+  const { data } = await api.get<Ticket>(`/tickets/${id}`);
+
+  return data;
+}
+
+export async function createTicket(
+  payload: CreateTicketPayload,
+): Promise<Ticket> {
+  const { data } = await api.post<Ticket>('/tickets', payload);
+
+  return data;
+}
+
+export async function updateTicket(
+  id: string,
+  payload: UpdateTicketPayload,
+): Promise<Ticket> {
+  const { data } = await api.patch<Ticket>(`/tickets/${id}`, payload);
+
+  return data;
+}
+
+export async function deleteTicket(id: string): Promise<void> {
+  await api.delete(`/tickets/${id}`);
+}
+
+export async function restoreTicket(id: string): Promise<Ticket> {
+  const { data } = await api.post<Ticket>(`/tickets/${id}/restore`);
+
+  return data;
 }

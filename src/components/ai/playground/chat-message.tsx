@@ -34,9 +34,12 @@ export function ChatMessage({
   const assistant =
     message.role === 'assistant';
 
-    const content =
-  assistant
-    ? useStream(message.content)
+  const streamedContent = useStream(
+    assistant ? message.content : '',
+  );
+
+  const content = assistant
+    ? streamedContent
     : message.content;
 
   return (

@@ -17,7 +17,7 @@ interface Props {
 
   onEdit: (article: KnowledgeArticle) => void;
 
-  onDelete: (id: number) => void;
+  onDelete: (id: string) => void;
 }
 
 export function ArticlesTable({

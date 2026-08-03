@@ -1,6 +1,6 @@
 "use client";
 
-import { User, Palette, Bell, Shield } from "lucide-react";
+import { User, Palette, Bell, Shield, type LucideIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -35,7 +35,7 @@ const tabs = [
 ] satisfies {
   id: SettingsTab;
   label: string;
-  icon: any;
+  icon: LucideIcon;
 }[];
 
 export function SettingsTabs({

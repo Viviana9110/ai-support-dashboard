@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 
 import { useAI } from '@/hooks/use-ai';
 import { useConversations } from '@/hooks/use-conversations';
+import { sendMessage } from '@/services/ai/chat.service';
 
 import { PlaygroundHeader } from './playground-header';
 import { PlaygroundSidebar } from './playground-sidebar';
