@@ -27,29 +27,26 @@ const MONTHS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-function bucketLabel(date: Date, period: AnalyticsPeriod): string {
-  switch (period) {
-    case 'today':
-      return `${String(date.getHours()).padStart(2, '0')}:00`;
-    case '7d':
-      return WEEKDAYS[date.getDay()];
-    case '30d':
-      return `W${Math.min(4, Math.floor(date.getDate() / 7) + 1)}`;
-    case '12m':
-      return MONTHS[date.getMonth()];
-  }
+function granularity(period: AnalyticsPeriod): 'hour' | 'day' | 'month' {
+  if (period === 'today') return 'hour';
+  if (period === '12m') return 'month';
+  return 'day';
 }
 
-function bucketOrder(label: string, period: AnalyticsPeriod): number {
+function dateFormat(period: AnalyticsPeriod): string {
+  return period === 'today' ? 'YYYY-MM-DD HH24:00' : 'YYYY-MM-DD';
+}
+
+function bucketLabel(bucket: string, period: AnalyticsPeriod): string {
   switch (period) {
     case 'today':
-      return Number(label.split(':')[0]);
+      return `${String(Number(bucket.slice(11, 13))).padStart(2, '0')}:00`;
     case '7d':
-      return WEEKDAYS.indexOf(label);
+      return WEEKDAYS[new Date(`${bucket}T00:00:00Z`).getUTCDay()];
     case '30d':
-      return Number(label.slice(1));
+      return `W${Math.min(4, Math.floor(Number(bucket.slice(8, 10)) / 7) + 1)}`;
     case '12m':
-      return MONTHS.indexOf(label);
+      return MONTHS[new Date(`${bucket}T00:00:00Z`).getUTCMonth()];
   }
 }
 
@@ -66,67 +63,109 @@ export async function GET(request: NextRequest) {
 
   const since = new Date(Date.now() - PERIOD_DAYS[period] * 86_400_000);
 
-  const tickets = await prisma.ticket.findMany({
-    where: { createdAt: { gte: since } },
-    include: { agent: true },
-  });
+  const unit = granularity(period);
+  const format = dateFormat(period);
 
-  const statusCounts: Record<string, number> = {
-    Open: 0,
-    Pending: 0,
-    Closed: 0,
-  };
-  const agentCounts: Record<string, number> = {};
-  const ticketsByBucket: Record<string, number> = {};
-  const resolutionByBucket: Record<string, { total: number; count: number }> = {};
+  const [statusGroups, agentGroups, bucketRows, resolutionRows] =
+    await Promise.all([
+      prisma.ticket.groupBy({
+        by: ['status'],
+        where: { deletedAt: null, createdAt: { gte: since } },
+        _count: { _all: true },
+      }),
+      prisma.ticket.groupBy({
+        by: ['agentId'],
+        where: { deletedAt: null, createdAt: { gte: since } },
+        _count: { _all: true },
+        orderBy: { _count: { agentId: 'desc' } },
+        take: 4,
+      }),
+      prisma.$queryRaw<{ bucket: string; count: number }[]>`
+        SELECT to_char(date_trunc(${unit}, "createdAt"), ${format}) AS bucket,
+               COUNT(*)::int AS count
+        FROM "Ticket"
+        WHERE "createdAt" >= ${since} AND "deletedAt" IS NULL
+        GROUP BY bucket
+        ORDER BY bucket
+      `,
+      prisma.$queryRaw<{ bucket: string; total: number; cnt: number }[]>`
+        SELECT to_char(date_trunc(${unit}, "createdAt"), ${format}) AS bucket,
+               SUM(EXTRACT(EPOCH FROM ("updatedAt" - "createdAt")) / 60)::double precision AS total,
+               COUNT(*)::int AS cnt
+        FROM "Ticket"
+        WHERE status = 'CLOSED' AND "createdAt" >= ${since} AND "deletedAt" IS NULL
+        GROUP BY bucket
+        ORDER BY bucket
+      `,
+    ]);
 
-  for (const ticket of tickets) {
-    const label = bucketLabel(ticket.createdAt, period);
+  const statusCounts: Record<string, number> = { Open: 0, Pending: 0, Closed: 0 };
 
-    ticketsByBucket[label] = (ticketsByBucket[label] ?? 0) + 1;
-
-    const status =
-      ticket.status === 'OPEN'
+  for (const group of statusGroups) {
+    const key =
+      group.status === 'OPEN'
         ? 'Open'
-        : ticket.status === 'PENDING'
+        : group.status === 'PENDING'
           ? 'Pending'
           : 'Closed';
+    statusCounts[key] = group._count._all;
+  }
 
-    statusCounts[status] += 1;
-    agentCounts[ticket.agent?.name ?? 'Unassigned'] =
-      (agentCounts[ticket.agent?.name ?? 'Unassigned'] ?? 0) + 1;
+  const agentIds = agentGroups
+    .map((group) => group.agentId)
+    .filter((id): id is string => id !== null);
 
-    if (ticket.status === 'CLOSED') {
-      const minutes =
-        (ticket.updatedAt.getTime() - ticket.createdAt.getTime()) / 60_000;
+  const users = agentIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: agentIds } },
+        select: { id: true, name: true },
+      })
+    : [];
 
-      const bucket = (resolutionByBucket[label] ??= { total: 0, count: 0 });
-      bucket.total += minutes;
-      bucket.count += 1;
+  const nameById = new Map(users.map((user) => [user.id, user.name]));
+
+  const topAgents: TopAgent[] = agentGroups.map((group) => ({
+    name: group.agentId
+      ? (nameById.get(group.agentId) ?? 'Unknown')
+      : 'Unassigned',
+    tickets: group._count._all,
+  }));
+
+  const monthlyTickets: MonthlyTickets[] = [];
+
+  for (const row of bucketRows) {
+    const label = bucketLabel(row.bucket, period);
+    const existing = monthlyTickets.find((entry) => entry.month === label);
+
+    if (existing) {
+      existing.tickets += row.count;
+    } else {
+      monthlyTickets.push({ month: label, tickets: row.count });
     }
   }
 
-  const monthlyTickets: MonthlyTickets[] = Object.entries(ticketsByBucket)
-    .map(([month, tickets]) => ({ month, tickets }))
-    .sort((a, b) => bucketOrder(a.month, period) - bucketOrder(b.month, period));
+  const resolutionAgg: Record<string, { total: number; cnt: number }> = {};
+
+  for (const row of resolutionRows) {
+    const label = bucketLabel(row.bucket, period);
+    const entry = (resolutionAgg[label] ??= { total: 0, cnt: 0 });
+
+    entry.total += row.total;
+    entry.cnt += row.cnt;
+  }
+
+  const resolutionTime: ResolutionTime[] = Object.entries(resolutionAgg).map(
+    ([day, entry]) => ({
+      day,
+      minutes: entry.cnt > 0 ? Math.round(entry.total / entry.cnt) : 0,
+    }),
+  );
 
   const ticketStatus: TicketStatus[] = (['Open', 'Pending', 'Closed'] as const)
     .filter((status) => statusCounts[status] > 0)
     .map((name) => ({ name, value: statusCounts[name] }));
 
-  const topAgents: TopAgent[] = Object.entries(agentCounts)
-    .map(([name, tickets]) => ({ name, tickets }))
-    .sort((a, b) => b.tickets - a.tickets)
-    .slice(0, 4);
-
-  const resolutionTime: ResolutionTime[] = Object.entries(resolutionByBucket)
-    .map(([day, { total, count }]) => ({
-      day,
-      minutes: Math.round(total / count),
-    }))
-    .sort((a, b) => bucketOrder(a.day, period) - bucketOrder(b.day, period));
-
-  const totalTickets = tickets.length;
+  const totalTickets = bucketRows.reduce((sum, row) => sum + row.count, 0);
   const closedTickets = statusCounts['Closed'];
   const satisfaction =
     totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0;

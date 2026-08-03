@@ -1,8 +1,8 @@
 import { api } from './api';
-import type { User } from './dashboard.types';
+import type { DashboardData } from './dashboard.types';
 
-export async function getUsers(): Promise<User[]> {
-  const response = await api.get<User[]>('/users');
+export async function getDashboard(): Promise<DashboardData> {
+  const { data } = await api.get<DashboardData>('/dashboard');
 
-  return response.data;
+  return data;
 }

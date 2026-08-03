@@ -10,17 +10,13 @@ import {
   YAxis,
 } from 'recharts';
 
-const data = [
-  { day: 'Mon', tickets: 18 },
-  { day: 'Tue', tickets: 24 },
-  { day: 'Wed', tickets: 15 },
-  { day: 'Thu', tickets: 28 },
-  { day: 'Fri', tickets: 34 },
-  { day: 'Sat', tickets: 12 },
-  { day: 'Sun', tickets: 8 },
-];
+import type { DashboardDayTickets } from '@/services/dashboard.types';
 
-export function TicketsChart() {
+interface TicketsChartProps {
+  data: DashboardDayTickets[];
+}
+
+export function TicketsChart({ data }: TicketsChartProps) {
   return (
     <div className="bg-background rounded-xl border p-6">
       <h2 className="mb-6 text-lg font-semibold">Tickets This Week</h2>
