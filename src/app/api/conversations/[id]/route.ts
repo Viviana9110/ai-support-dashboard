@@ -1,15 +1,25 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
-import { serializeConversation } from '@/lib/serializers';
+import { serializeConversation, serializeConversationDetail } from '@/lib/serializers';
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
 
+  if (!UUID_REGEX.test(id)) {
+    return NextResponse.json(
+      { error: 'Conversation not found.' },
+      { status: 404 },
+    );
+  }
+
   const conversation = await prisma.conversation.findUnique({
-    where: { id },
+    where: { id, deletedAt: null },
     include: {
       customer: true,
       messages: { orderBy: { createdAt: 'asc' } },
@@ -23,7 +33,7 @@ export async function GET(_request: Request, context: RouteContext) {
     );
   }
 
-  return NextResponse.json(serializeConversation(conversation));
+  return NextResponse.json(serializeConversationDetail(conversation));
 }
 
 export async function PATCH(request: Request, context: RouteContext) {

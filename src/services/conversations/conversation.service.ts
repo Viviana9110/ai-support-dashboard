@@ -1,5 +1,6 @@
 import { api } from '../api';
-import type { Conversation, Message } from './conversation.types';
+import type { Conversation, ConversationDetail, Message } from './conversation.types';
+import type { SendMessagePayload } from '@/lib/schemas/conversation.schema';
 
 export async function getConversations(): Promise<Conversation[]> {
   const { data } = await api.get<Conversation[]>('/conversations');
@@ -7,15 +8,15 @@ export async function getConversations(): Promise<Conversation[]> {
   return data;
 }
 
-export async function getConversation(id: string): Promise<Conversation> {
-  const { data } = await api.get<Conversation>(`/conversations/${id}`);
+export async function getConversationDetail(id: string): Promise<ConversationDetail> {
+  const { data } = await api.get<ConversationDetail>(`/conversations/${id}`);
 
   return data;
 }
 
 export async function sendMessage(
   conversationId: string,
-  message: Pick<Message, 'sender' | 'text'>,
+  message: SendMessagePayload,
 ): Promise<Message> {
   const { data } = await api.post<Message>(
     `/conversations/${conversationId}/messages`,

@@ -19,6 +19,7 @@ import type {
 
 import type {
   Conversation,
+  ConversationDetail,
   Message,
 } from '@/services/conversations/conversation.types';
 
@@ -218,6 +219,7 @@ export function serializeConversation(dbConversation: {
   online: boolean;
   unread: number;
   lastMessage: string;
+  updatedAt: Date;
   messages: {
     id: string;
     sender: DBMessageSender;
@@ -232,6 +234,27 @@ export function serializeConversation(dbConversation: {
     online: dbConversation.online,
     unread: dbConversation.unread,
     lastMessage: dbConversation.lastMessage,
+    updatedAt: formatRelativeTime(dbConversation.updatedAt),
+    messages: dbConversation.messages.map(serializeMessage),
+  };
+}
+
+export function serializeConversationDetail(
+  dbConversation: Parameters<typeof serializeConversation>[0] & {
+    customer: {
+      id: string;
+      name: string;
+      email: string;
+      company: string;
+      status: DBCustomerStatus;
+    };
+  },
+): ConversationDetail {
+  const conversation = serializeConversation(dbConversation);
+
+  return {
+    ...conversation,
+    customer: serializeCustomer(dbConversation.customer),
     messages: dbConversation.messages.map(serializeMessage),
   };
 }

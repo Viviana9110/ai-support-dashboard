@@ -38,6 +38,10 @@ export function ConversationItem({
         </div>
 
         <div className="flex flex-col items-end gap-2">
+          <span className="text-muted-foreground text-xs">
+            {conversation.updatedAt}
+          </span>
+
           {conversation.online && (
             <span className="text-xs text-green-600">● Online</span>
           )}
