@@ -2,11 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { Card } from '@/components/ui/card';
+import { AlertTriangle, MessageSquare, Plus } from 'lucide-react';
 
-import { useAI } from '@/hooks/use-ai';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
+
+import {
+  useAiConversation,
+  useAiConversations,
+  useAiSendMessage,
+} from '@/hooks/use-ai-conversations';
 import { useConversations } from '@/hooks/use-conversations';
-import { sendMessage } from '@/services/ai/chat.service';
 
 import { PlaygroundHeader } from './playground-header';
 import { PlaygroundSidebar } from './playground-sidebar';
@@ -16,13 +23,15 @@ import { PromptInput } from './prompt-input';
 
 import {
   ChatConversation,
-  ChatMessage,
 } from '@/services/ai/ai.types';
 
 export function AIPlayground() {
-  const { data = [], isLoading } = useAI();
-
-  const [typing, setTyping] = useState(false);
+  const {
+    data = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useAiConversations();
 
   const [assistant, setAssistant] =
     useState('Customer Support AI');
@@ -42,20 +51,29 @@ export function AIPlayground() {
   const [activeConversationId, setActiveConversationId] =
     useState('');
 
+  const sendAiMessage = useAiSendMessage();
+
+  const {
+    data: detail,
+    isLoading: isDetailLoading,
+    isError: isDetailError,
+    refetch: refetchDetail,
+  } = useAiConversation(activeConversationId);
+
   useEffect(() => {
     if (!data.length) return;
 
     if (conversations.length > 0) return;
 
-    const firstConversation: ChatConversation = {
-      id: crypto.randomUUID(),
-      title: 'New Chat',
-      createdAt: new Date(),
-      messages: data,
-    };
+    const loadedConversations: ChatConversation[] = data.map((conversation) => ({
+      id: conversation.id,
+      title: conversation.title,
+      createdAt: conversation.createdAt,
+      messages: [],
+    }));
 
-    setConversations([firstConversation]);
-    setActiveConversationId(firstConversation.id);
+    setConversations(loadedConversations);
+    setActiveConversationId(loadedConversations[0].id);
   }, [data, conversations.length, setConversations]);
 
   const activeConversation = useMemo(() => {
@@ -68,60 +86,11 @@ export function AIPlayground() {
   async function handleSend(prompt: string) {
     if (!activeConversation) return;
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
+    await sendAiMessage.mutateAsync({
+      id: activeConversation.id,
       content: prompt,
-      createdAt: new Date(),
-    };
-
-    const updatedMessages = [
-      ...activeConversation.messages,
-      userMessage,
-    ];
-
-    setConversations((previous) =>
-      previous.map((conversation) =>
-        conversation.id === activeConversationId
-          ? {
-              ...conversation,
-              title:
-                conversation.messages.length <= 1
-                  ? prompt.slice(0, 35)
-                  : conversation.title,
-              messages: updatedMessages,
-            }
-          : conversation,
-      ),
-    );
-
-    setTyping(true);
-
-    try {
-      const response = await sendMessage(prompt);
-       const assistantMessage: ChatMessage = {
-    id: crypto.randomUUID(),
-    role: 'assistant',
-    content: response.output,
-    createdAt: new Date(),
-
-  };
-   setConversations((previous) =>
-        previous.map((conversation) =>
-          conversation.id === activeConversationId
-            ? {
-                ...conversation,
-                messages: [
-                  ...updatedMessages,
-                  assistantMessage,
-                ],
-              }
-            : conversation,
-        ),
-      );
-    } finally {
-      setTyping(false);
-    }   
+      role: 'user',
+    });
   }
 
   function handleNewConversation() {
@@ -153,6 +122,66 @@ export function AIPlayground() {
     );
   }
 
+  if (isError) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Something went wrong"
+        description="We could not load your conversations. Please try again."
+        action={
+          <Button onClick={() => refetch()} variant="outline">
+            Retry
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (isDetailLoading) {
+    return (
+      <Card className="flex h-[700px] items-center justify-center">
+        Loading AI Playground...
+      </Card>
+    );
+  }
+
+  if (isDetailError) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Something went wrong"
+        description="We could not load this conversation. Please try again."
+        action={
+          <Button onClick={() => refetchDetail()} variant="outline">
+            Retry
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (conversations.length === 0) {
+    return (
+      <Card className="overflow-hidden">
+        <PlaygroundHeader />
+
+        <div className="flex h-[700px] items-center justify-center p-8">
+          <EmptyState
+            icon={MessageSquare}
+            title="No conversations yet"
+            description="Start a new chat to begin."
+            action={
+              <Button onClick={handleNewConversation}>
+                <Plus size={16} />
+                New Chat
+              </Button>
+            }
+          />
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className="overflow-hidden">
       <PlaygroundHeader />
@@ -179,12 +208,13 @@ export function AIPlayground() {
 
         <div className="flex flex-1 flex-col">
           <ChatWindow
-            messages={activeConversation?.messages ?? []}
-            loading={typing}
+            messages={detail?.messages ?? []}
+            loading={sendAiMessage.isPending}
           />
 
           <PromptInput
             onSend={handleSend}
+            disabled={sendAiMessage.isPending}
           />
         </div>
       </div>

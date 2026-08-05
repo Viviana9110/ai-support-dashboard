@@ -1,9 +1,8 @@
 import { useState } from "react";
 
-import { conversations as initial } from "@/services/ai/conversations.mock";
 import { ChatConversation } from "@/services/ai/ai.types";
 
-export function useConversations() {
+export function useConversations(initial: ChatConversation[] = []) {
   const [conversations, setConversations] =
     useState<ChatConversation[]>(initial);
 

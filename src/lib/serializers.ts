@@ -1,4 +1,5 @@
 import type {
+  AiMessageRole as DBAiMessageRole,
   ArticleStatus as DBArticleStatus,
   CustomerStatus as DBCustomerStatus,
   MessageSender as DBMessageSender,
@@ -278,5 +279,68 @@ export function serializeArticle(dbArticle: {
     author: dbArticle.author.name,
     updatedAt: formatDate(dbArticle.updatedAt),
     views: dbArticle.views,
+  };
+}
+
+export interface AiConversationSummary {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export function serializeAiConversation(dbAiConversation: {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): AiConversationSummary {
+  return {
+    id: dbAiConversation.id,
+    title: dbAiConversation.title,
+    createdAt: dbAiConversation.createdAt,
+    updatedAt: dbAiConversation.updatedAt,
+  };
+}
+
+const AI_MESSAGE_ROLE: Record<DBAiMessageRole, AiMessage['role']> = {
+  USER: 'user',
+  ASSISTANT: 'assistant',
+  SYSTEM: 'system',
+};
+
+export interface AiMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  createdAt: Date;
+}
+
+export interface AiConversationDetail extends AiConversationSummary {
+  messages: AiMessage[];
+}
+
+export function serializeAiMessage(dbAiMessage: {
+  id: string;
+  role: DBAiMessageRole;
+  content: string;
+  createdAt: Date;
+}): AiMessage {
+  return {
+    id: dbAiMessage.id,
+    role: AI_MESSAGE_ROLE[dbAiMessage.role],
+    content: dbAiMessage.content,
+    createdAt: dbAiMessage.createdAt,
+  };
+}
+
+export function serializeAiConversationDetail(
+  dbAiConversation: Parameters<typeof serializeAiConversation>[0] & {
+    messages: Parameters<typeof serializeAiMessage>[0][];
+  },
+): AiConversationDetail {
+  return {
+    ...serializeAiConversation(dbAiConversation),
+    messages: dbAiConversation.messages.map(serializeAiMessage),
   };
 }

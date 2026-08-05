@@ -1,6 +1,14 @@
 export type MessageRole =
   | "user"
-  | "assistant";
+  | "assistant"
+  | "system";
+
+export interface AiConversationSummary {
+  id: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface ChatMessage {
  id: string;

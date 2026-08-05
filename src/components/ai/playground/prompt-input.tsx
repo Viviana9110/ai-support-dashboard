@@ -8,20 +8,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface Props {
-  onSend: (message: string) => void;
+  onSend: (message: string) => Promise<void>;
+  disabled?: boolean;
 }
 
 export function PromptInput({
   onSend,
+  disabled,
 }: Props) {
   const [message, setMessage] = useState('');
 
-  function send() {
-    if (!message.trim()) return;
+  async function send() {
+    if (!message.trim() || disabled) return;
 
-    onSend(message);
+    try {
+      await onSend(message);
 
-    setMessage('');
+      setMessage('');
+    } catch {
+      // Keep the message so the user can retry after a failure.
+    }
   }
 
   return (
@@ -35,12 +41,16 @@ export function PromptInput({
           }
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              send();
+              void send();
             }
           }}
+          disabled={disabled}
         />
 
-        <Button onClick={send}>
+        <Button
+          onClick={() => void send()}
+          disabled={disabled}
+        >
           <SendHorizontal size={18} />
         </Button>
       </div>
