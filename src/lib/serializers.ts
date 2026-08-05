@@ -13,6 +13,7 @@ import type {
 
 import type {
   Customer,
+  CustomerDetail,
   CustomerStatus,
 } from '@/services/customers/customers.types';
 
@@ -171,6 +172,28 @@ export function serializeCustomer(dbCustomer: {
     email: dbCustomer.email,
     company: dbCustomer.company,
     status: CUSTOMER_STATUS[dbCustomer.status],
+  };
+}
+
+export function serializeCustomerDetail(
+  dbCustomer: {
+    id: string;
+    name: string;
+    email: string;
+    company: string;
+    status: DBCustomerStatus;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  dbTickets: Parameters<typeof serializeTicket>[0][],
+  dbActivity: Parameters<typeof serializeAuditLog>[0][],
+): CustomerDetail {
+  return {
+    ...serializeCustomer(dbCustomer),
+    createdAt: formatRelativeTime(dbCustomer.createdAt),
+    updatedAt: formatRelativeTime(dbCustomer.updatedAt),
+    tickets: dbTickets.map(serializeTicket),
+    activity: dbActivity.map(serializeAuditLog),
   };
 }
 

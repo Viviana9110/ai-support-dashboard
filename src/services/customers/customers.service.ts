@@ -1,7 +1,7 @@
 import { api } from '../api';
 import type { CustomerUpdateData, CustomerFormData } from '@/lib/schemas/customer.schema';
 
-import type { Customer } from './customers.types';
+import type { Customer, CustomerDetail } from './customers.types';
 
 export type CreateCustomerPayload = CustomerFormData;
 
@@ -15,6 +15,12 @@ export async function getCustomers(): Promise<Customer[]> {
 
 export async function getCustomer(id: string): Promise<Customer> {
   const { data } = await api.get<Customer>(`/customers/${id}`);
+
+  return data;
+}
+
+export async function getCustomerDetail(id: string): Promise<CustomerDetail> {
+  const { data } = await api.get<CustomerDetail>(`/customers/${id}`);
 
   return data;
 }

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createCustomer,
   deleteCustomer,
+  getCustomerDetail,
   getCustomers,
   restoreCustomer,
   updateCustomer,
@@ -17,6 +18,13 @@ export function useCustomers() {
   return useQuery({
     queryKey: ['customers'],
     queryFn: getCustomers,
+  });
+}
+
+export function useCustomerDetail(id: string) {
+  return useQuery({
+    queryKey: ['customers', id],
+    queryFn: () => getCustomerDetail(id),
   });
 }
 

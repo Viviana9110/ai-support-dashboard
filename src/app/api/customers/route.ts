@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { getActorId, writeAuditLog } from '@/lib/audit';
 import { customerSchema } from '@/lib/schemas/customer.schema';
 import { serializeCustomer, toDBCustomerStatus } from '@/lib/serializers';
 
@@ -25,14 +26,42 @@ export async function POST(request: Request) {
     );
   }
 
+  const actorId = await getActorId();
+
+  if (!actorId) {
+    return NextResponse.json(
+      { error: 'No user available to create the customer.' },
+      { status: 401 },
+    );
+  }
+
+  const data = parsed.data;
+
   try {
-    const customer = await prisma.customer.create({
-      data: {
-        name: parsed.data.name,
-        email: parsed.data.email,
-        company: parsed.data.company,
-        status: toDBCustomerStatus(parsed.data.status),
-      },
+    const customer = await prisma.$transaction(async (tx) => {
+      const created = await tx.customer.create({
+        data: {
+          name: data.name,
+          email: data.email,
+          company: data.company,
+          status: toDBCustomerStatus(data.status),
+        },
+      });
+
+      await writeAuditLog(tx, {
+        entity: 'Customer',
+        entityId: created.id,
+        action: 'created',
+        userId: actorId,
+        metadata: {
+          name: created.name,
+          email: created.email,
+          company: created.company,
+          status: created.status,
+        },
+      });
+
+      return created;
     });
 
     return NextResponse.json(serializeCustomer(customer), { status: 201 });

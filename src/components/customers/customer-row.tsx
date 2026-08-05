@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Pencil, Trash2 } from 'lucide-react';
 
 import { Customer } from '@/services/customers/customers.types';
@@ -13,7 +14,14 @@ interface CustomerRowProps {
 export function CustomerRow({ customer, onEdit, onDelete }: CustomerRowProps) {
   return (
     <tr className="border-b hover:bg-gray-50">
-      <td className="px-4 py-3">{customer.name}</td>
+      <td className="px-4 py-3">
+        <Link
+          href={`/customers/${customer.id}`}
+          className="font-medium hover:underline"
+        >
+          {customer.name}
+        </Link>
+      </td>
 
       <td className="px-4 py-3">{customer.email}</td>
 
