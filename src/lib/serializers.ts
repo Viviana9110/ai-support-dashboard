@@ -287,6 +287,9 @@ export interface AiConversationSummary {
   title: string;
   createdAt: Date;
   updatedAt: Date;
+  messageCount: number;
+  lastMessage: string | null;
+  lastMessageRole: AiMessage['role'] | null;
 }
 
 export function serializeAiConversation(dbAiConversation: {
@@ -294,12 +297,24 @@ export function serializeAiConversation(dbAiConversation: {
   title: string;
   createdAt: Date;
   updatedAt: Date;
+  _count?: { messages: number };
+  messages?: { role: DBAiMessageRole; content: string }[];
 }): AiConversationSummary {
+  const messages = dbAiConversation.messages ?? [];
+
+  const lastMessage = messages[messages.length - 1];
+
   return {
     id: dbAiConversation.id,
     title: dbAiConversation.title,
     createdAt: dbAiConversation.createdAt,
     updatedAt: dbAiConversation.updatedAt,
+    messageCount:
+      dbAiConversation._count?.messages ?? messages.length,
+    lastMessage: lastMessage?.content ?? null,
+    lastMessageRole: lastMessage
+      ? AI_MESSAGE_ROLE[lastMessage.role]
+      : null,
   };
 }
 

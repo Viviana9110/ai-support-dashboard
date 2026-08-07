@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  createConversation,
   getConversation,
   getConversations,
   sendMessage,
@@ -23,6 +24,20 @@ export function useAiConversation(id: string) {
   });
 }
 
+export function useCreateAiConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (title: string) => createConversation(title),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["ai-conversations"],
+      });
+    },
+  });
+}
+
 export function useAiSendMessage() {
   const queryClient = useQueryClient();
 
@@ -30,12 +45,11 @@ export function useAiSendMessage() {
     mutationFn: ({
       id,
       content,
-      role,
     }: {
       id: string;
       content: string;
       role: "user" | "assistant";
-    }) => sendMessage(id, { content, role }),
+    }) => sendMessage({ conversationId: id, message: content }),
 
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({

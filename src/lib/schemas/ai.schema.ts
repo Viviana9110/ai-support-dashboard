@@ -6,3 +6,10 @@ export const aiMessageSchema = z.object({
 });
 
 export type AiMessagePayload = z.infer<typeof aiMessageSchema>;
+
+export const aiChatSchema = z.object({
+  conversationId: z.string().min(1, 'Conversation ID is required'),
+  message: z.string().trim().min(1, 'Message is required'),
+});
+
+export type AiChatPayload = z.infer<typeof aiChatSchema>;

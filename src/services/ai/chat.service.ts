@@ -1,17 +1,44 @@
 import type {
   AiConversationSummary,
   Conversation,
-} from "./ai.types";
+} from './ai.types';
 
-import type { AiMessage } from "@/lib/serializers";
-import type { AiMessagePayload } from "@/lib/schemas/ai.schema";
+import type { AiMessage } from '@/lib/serializers';
 
-export async function sendMessage(
-  conversationId: string,
-  message: AiMessagePayload,
-): Promise<AiMessage> {
+export interface SendMessageResponse {
+  userMessage: AiMessage;
+  assistantMessage: AiMessage;
+}
+
+export async function sendMessage(payload: {
+  conversationId: string;
+  message: string;
+}): Promise<SendMessageResponse> {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+
+    headers: {
+      'Content-Type':
+        'application/json',
+    },
+
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      'Unable to send message.',
+    );
+  }
+
+  return response.json();
+}
+
+export async function createConversation(
+  title: string,
+): Promise<AiConversationSummary> {
   const response = await fetch(
-    `/api/ai/conversations/${conversationId}/messages`,
+    '/api/ai/conversations',
     {
       method: 'POST',
 
@@ -20,13 +47,13 @@ export async function sendMessage(
           'application/json',
       },
 
-      body: JSON.stringify(message),
+      body: JSON.stringify({ title }),
     },
   );
 
   if (!response.ok) {
     throw new Error(
-      'Unable to send message.',
+      'Unable to create conversation.',
     );
   }
 

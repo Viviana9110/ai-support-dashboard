@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
+
+import { useQueryClient } from '@tanstack/react-query';
 
 import { AlertTriangle, MessageSquare, Plus } from 'lucide-react';
 
@@ -12,8 +14,8 @@ import {
   useAiConversation,
   useAiConversations,
   useAiSendMessage,
+  useCreateAiConversation,
 } from '@/hooks/use-ai-conversations';
-import { useConversations } from '@/hooks/use-conversations';
 
 import { PlaygroundHeader } from './playground-header';
 import { PlaygroundSidebar } from './playground-sidebar';
@@ -23,6 +25,7 @@ import { PromptInput } from './prompt-input';
 
 import {
   ChatConversation,
+  Conversation,
 } from '@/services/ai/ai.types';
 
 export function AIPlayground() {
@@ -42,16 +45,13 @@ export function AIPlayground() {
   const [temperature, setTemperature] =
     useState(0.7);
 
-  const {
-    conversations,
-    setConversations,
-    createConversation,
-  } = useConversations();
-
   const [activeConversationId, setActiveConversationId] =
     useState('');
 
+  const queryClient = useQueryClient();
+
   const sendAiMessage = useAiSendMessage();
+  const createAiConversation = useCreateAiConversation();
 
   const {
     data: detail,
@@ -60,57 +60,43 @@ export function AIPlayground() {
     refetch: refetchDetail,
   } = useAiConversation(activeConversationId);
 
-  useEffect(() => {
-    if (!data.length) return;
-
-    if (conversations.length > 0) return;
-
-    const loadedConversations: ChatConversation[] = data.map((conversation) => ({
+  const conversations: ChatConversation[] = data.map(
+    (conversation) => ({
       id: conversation.id,
       title: conversation.title,
       createdAt: conversation.createdAt,
       messages: [],
-    }));
-
-    setConversations(loadedConversations);
-    setActiveConversationId(loadedConversations[0].id);
-  }, [data, conversations.length, setConversations]);
-
-  const activeConversation = useMemo(() => {
-    return conversations.find(
-      (conversation) =>
-        conversation.id === activeConversationId,
-    );
-  }, [conversations, activeConversationId]);
+      messageCount: conversation.messageCount,
+      lastMessage: conversation.lastMessage,
+      lastMessageRole: conversation.lastMessageRole,
+    }),
+  );
 
   async function handleSend(prompt: string) {
-    if (!activeConversation) return;
+    if (!activeConversationId) return;
 
     await sendAiMessage.mutateAsync({
-      id: activeConversation.id,
+      id: activeConversationId,
       content: prompt,
       role: 'user',
     });
   }
 
-  function handleNewConversation() {
-    const id = createConversation();
+  async function handleNewConversation() {
+    const created = await createAiConversation.mutateAsync('New Chat');
 
-    setActiveConversationId(id);
+    setActiveConversationId(created.id);
   }
 
   function handleClear() {
-    if (!activeConversation) return;
+    if (!activeConversationId) return;
 
-    setConversations((previous) =>
-      previous.map((conversation) =>
-        conversation.id === activeConversationId
-          ? {
-              ...conversation,
-              messages: [],
-            }
-          : conversation,
-      ),
+    queryClient.setQueryData<Conversation>(
+      ['ai-conversations', activeConversationId],
+      (previous) =>
+        previous
+          ? { ...previous, messages: [] }
+          : previous,
     );
   }
 
@@ -160,7 +146,7 @@ export function AIPlayground() {
     );
   }
 
-  if (conversations.length === 0) {
+  if (data.length === 0) {
     return (
       <Card className="overflow-hidden">
         <PlaygroundHeader />

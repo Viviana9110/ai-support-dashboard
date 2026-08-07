@@ -8,6 +8,18 @@ export async function GET() {
   const conversations = await prisma.aiConversation.findMany({
     where: { deletedAt: null },
     orderBy: { updatedAt: 'desc' },
+    select: {
+      id: true,
+      title: true,
+      createdAt: true,
+      updatedAt: true,
+      _count: { select: { messages: true } },
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { role: true, content: true },
+      },
+    },
   });
 
   return NextResponse.json(conversations.map(serializeAiConversation));

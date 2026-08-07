@@ -51,8 +51,17 @@ export function ConversationItem({
               {conversation.title}
             </p>
 
+            {conversation.lastMessage ? (
+              <p className="text-muted-foreground line-clamp-1 text-xs">
+                {conversation.lastMessage}
+              </p>
+            ) : null}
+
             <p className="text-muted-foreground text-xs">
-  {conversation.messages.length} messages •{' '}
+  {(conversation.messageCount ?? conversation.messages.length) === 0
+    ? 'No messages yet'
+    : `${conversation.messageCount ?? conversation.messages.length} messages`}{' '}
+  •{' '}
   {formatRelativeDate(
     conversation.createdAt,
   )}

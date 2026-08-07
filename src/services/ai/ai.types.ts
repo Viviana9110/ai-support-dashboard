@@ -8,6 +8,9 @@ export interface AiConversationSummary {
   title: string;
   createdAt: Date;
   updatedAt: Date;
+  messageCount: number;
+  lastMessage: string | null;
+  lastMessageRole: MessageRole | null;
 }
 
 export interface ChatMessage {
@@ -32,6 +35,12 @@ export interface ChatConversation {
   createdAt: Date;
 
   messages: ChatMessage[];
+
+  messageCount?: number;
+
+  lastMessage?: string | null;
+
+  lastMessageRole?: MessageRole | null;
 
   pinned?: boolean;
 
