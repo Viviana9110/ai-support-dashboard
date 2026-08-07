@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 
 import { ChatConversation } from '@/services/ai/ai.types';
 
+import { useDeleteAiConversation } from '@/hooks/use-ai-conversations';
+
 import { ConversationItem } from './conversation-item';
 
 interface Props {
@@ -23,6 +25,21 @@ export function ConversationList({
   onSelect,
   onNew,
 }: Props) {
+  const deleteAiConversation = useDeleteAiConversation();
+
+  async function handleDelete(id: string) {
+    await deleteAiConversation.mutateAsync(id);
+
+    const remaining = conversations.filter(
+      (conversation) =>
+        conversation.id !== id,
+    );
+
+    if (activeId === id) {
+      onSelect(remaining[0]?.id ?? '');
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
       <Button
@@ -44,6 +61,9 @@ export function ConversationList({
             }
             onSelect={() =>
               onSelect(conversation.id)
+            }
+            onDelete={() =>
+              handleDelete(conversation.id)
             }
           />
         ))}

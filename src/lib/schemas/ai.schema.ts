@@ -13,3 +13,15 @@ export const aiChatSchema = z.object({
 });
 
 export type AiChatPayload = z.infer<typeof aiChatSchema>;
+
+export const renameConversationSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Title is required')
+    .max(100, 'Title must be 100 characters or less'),
+});
+
+export type RenameConversationPayload = z.infer<
+  typeof renameConversationSchema
+>;

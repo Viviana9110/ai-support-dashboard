@@ -4,8 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createConversation,
+  deleteConversation,
   getConversation,
   getConversations,
+  renameConversation,
   sendMessage,
 } from "@/services/ai/chat.service";
 
@@ -54,6 +56,41 @@ export function useAiSendMessage() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["ai-conversations", variables.id],
+      });
+    },
+  });
+}
+
+export function useRenameAiConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      title,
+    }: {
+      id: string;
+      title: string;
+    }) => renameConversation(id, title),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["ai-conversations"],
+      });
+    },
+  });
+}
+
+export function useDeleteAiConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      deleteConversation(id),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["ai-conversations"],
       });
     },
   });
