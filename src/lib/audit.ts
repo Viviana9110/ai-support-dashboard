@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
 import type { Prisma } from '@/generated/prisma/client';
 
@@ -23,13 +22,7 @@ export interface AuditLogInput {
 export async function getActorId(): Promise<string | null> {
   const session = await getSession();
 
-  if (session?.sub) return session.sub;
-
-  const fallback = await prisma.user.findFirst({
-    select: { id: true },
-  });
-
-  return fallback?.id ?? null;
+  return session?.sub ?? null;
 }
 
 export function writeAuditLog(
