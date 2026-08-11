@@ -1,10 +1,15 @@
 export function formatRelativeDate(
-  date: Date,
+  date: Date | string,
 ) {
+  const value =
+    typeof date === 'string'
+      ? new Date(date)
+      : date;
+
   const now = new Date();
 
   const diff =
-    now.getTime() - date.getTime();
+    now.getTime() - value.getTime();
 
   const day = 86400000;
 
@@ -24,5 +29,5 @@ export function formatRelativeDate(
     return 'This Month';
   }
 
-  return date.toLocaleDateString();
+  return value.toLocaleDateString();
 }

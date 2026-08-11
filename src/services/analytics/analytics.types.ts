@@ -19,10 +19,9 @@ export interface ResolutionTime {
 }
 
 export interface AnalyticsData {
-  revenue: number;
   tickets: number;
   responseTime: string;
-  satisfaction: number;
+  resolutionRate: number;
 
   monthlyTickets: MonthlyTickets[];
 

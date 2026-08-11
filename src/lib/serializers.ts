@@ -285,8 +285,8 @@ export function serializeArticle(dbArticle: {
 export interface AiConversationSummary {
   id: string;
   title: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   messageCount: number;
   lastMessage: string | null;
   lastMessageRole: AiMessage['role'] | null;
@@ -307,8 +307,8 @@ export function serializeAiConversation(dbAiConversation: {
   return {
     id: dbAiConversation.id,
     title: dbAiConversation.title,
-    createdAt: dbAiConversation.createdAt,
-    updatedAt: dbAiConversation.updatedAt,
+    createdAt: dbAiConversation.createdAt.toISOString(),
+    updatedAt: dbAiConversation.updatedAt.toISOString(),
     messageCount:
       dbAiConversation._count?.messages ?? messages.length,
     lastMessage: lastMessage?.content ?? null,
@@ -328,7 +328,7 @@ export interface AiMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface AiConversationDetail extends AiConversationSummary {
@@ -345,7 +345,7 @@ export function serializeAiMessage(dbAiMessage: {
     id: dbAiMessage.id,
     role: AI_MESSAGE_ROLE[dbAiMessage.role],
     content: dbAiMessage.content,
-    createdAt: dbAiMessage.createdAt,
+    createdAt: dbAiMessage.createdAt.toISOString(),
   };
 }
 

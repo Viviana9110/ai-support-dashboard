@@ -10,7 +10,7 @@ export function useConversations(initial: ChatConversation[] = []) {
     const conversation: ChatConversation = {
       id: crypto.randomUUID(),
       title: "New Chat",
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
       messages: [],
     };
 
@@ -90,7 +90,7 @@ function duplicateConversation(
     ...original,
     id: crypto.randomUUID(),
     title: `${original.title} Copy`,
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
   };
 
   setConversations(previous => [

@@ -6,25 +6,25 @@ export type MessageRole =
 export interface AiConversationSummary {
   id: string;
   title: string;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
   messageCount: number;
   lastMessage: string | null;
   lastMessageRole: MessageRole | null;
 }
 
 export interface ChatMessage {
- id: string;
+  id: string;
   role: MessageRole;
   content: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface Conversation {
   id: string;
   title: string;
-  createdAt: Date;
-  updatedAt: Date;  
+  createdAt: string;
+  updatedAt: string;
   messages: ChatMessage[];
 }
 
@@ -32,7 +32,7 @@ export interface ChatConversation {
   id: string;
   title: string;
 
-  createdAt: Date;
+  createdAt: string;
 
   messages: ChatMessage[];
 

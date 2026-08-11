@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -13,9 +13,10 @@ import { EmptyState } from '@/components/ui/empty-state';
 import {
   useAiConversation,
   useAiConversations,
-  useAiSendMessage,
   useCreateAiConversation,
 } from '@/hooks/use-ai-conversations';
+
+import { useAiStream } from '@/hooks/use-ai-stream';
 
 import { PlaygroundHeader } from './playground-header';
 import { PlaygroundSidebar } from './playground-sidebar';
@@ -25,6 +26,7 @@ import { PromptInput } from './prompt-input';
 
 import {
   ChatConversation,
+  ChatMessage,
   Conversation,
 } from '@/services/ai/ai.types';
 
@@ -48,9 +50,19 @@ export function AIPlayground() {
   const [activeConversationId, setActiveConversationId] =
     useState('');
 
+  const [streamingText, setStreamingText] =
+    useState('');
+
+  const { startStream, cancelStream, isStreaming } =
+    useAiStream();
+
+  useEffect(() => {
+    cancelStream();
+    setStreamingText('');
+  }, [activeConversationId, cancelStream]);
+
   const queryClient = useQueryClient();
 
-  const sendAiMessage = useAiSendMessage();
   const createAiConversation = useCreateAiConversation();
 
   const {
@@ -72,13 +84,92 @@ export function AIPlayground() {
     }),
   );
 
+  const streamedMessage: ChatMessage | null =
+    streamingText
+      ? {
+          id: 'streaming',
+          role: 'assistant',
+          content: streamingText,
+          createdAt: new Date().toISOString(),
+        }
+      : null;
+
+  const messages = streamedMessage
+    ? [...(detail?.messages ?? []), streamedMessage]
+    : (detail?.messages ?? []);
+
   async function handleSend(prompt: string) {
     if (!activeConversationId) return;
 
-    await sendAiMessage.mutateAsync({
-      id: activeConversationId,
-      content: prompt,
-      role: 'user',
+    startStream({
+      conversationId: activeConversationId,
+      message: prompt,
+      model,
+      temperature,
+      assistant,
+      onDelta(chunk) {
+        setStreamingText(
+          (previous) => previous + chunk,
+        );
+      },
+      onDone(payload) {
+        const userMessage =
+          payload.userMessage as
+            | ChatMessage
+            | undefined;
+
+        const assistantMessage =
+          payload.assistantMessage as
+            | ChatMessage
+            | undefined;
+
+        setStreamingText('');
+
+        if (userMessage && assistantMessage) {
+          queryClient.setQueryData<Conversation>(
+            ['ai-conversations', activeConversationId],
+            (previous) => {
+              if (!previous) {
+                return previous;
+              }
+
+              const appended = [
+                userMessage,
+                assistantMessage,
+              ].filter(
+                (message) =>
+                  !previous.messages.some(
+                    (existing) =>
+                      existing.id ===
+                      message.id,
+                  ),
+              );
+
+              if (appended.length === 0) {
+                return previous;
+              }
+
+              return {
+                ...previous,
+                messages: [
+                  ...previous.messages,
+                  ...appended,
+                ],
+              };
+            },
+          );
+        }
+
+        queryClient.invalidateQueries({
+          queryKey: [
+            'ai-conversations',
+            activeConversationId,
+          ],
+        });
+      },
+      onError() {
+        setStreamingText('');
+      },
     });
   }
 
@@ -194,13 +285,13 @@ export function AIPlayground() {
 
         <div className="flex flex-1 flex-col">
           <ChatWindow
-            messages={detail?.messages ?? []}
-            loading={sendAiMessage.isPending}
+            messages={messages}
+            loading={isStreaming && streamingText.length === 0}
           />
 
           <PromptInput
             onSend={handleSend}
-            disabled={sendAiMessage.isPending}
+            disabled={isStreaming}
           />
         </div>
       </div>

@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 
-import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
+import { renameConversationSchema } from '@/lib/schemas/ai.schema';
 import { serializeAiConversation } from '@/lib/serializers';
 
 export async function GET() {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const conversations = await prisma.aiConversation.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: null, userId: auth.sub },
     orderBy: { updatedAt: 'desc' },
     select: {
       id: true,
@@ -26,32 +33,36 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const auth = await requireSession();
 
-  const title = typeof body.title === 'string' ? body.title.trim() : '';
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
 
-  if (!title) {
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: 'Invalid JSON body.' },
+      { status: 400 },
+    );
+  }
+
+  const parsed = renameConversationSchema.safeParse(body);
+
+  if (!parsed.success) {
     return NextResponse.json(
       { error: 'A title is required.' },
       { status: 400 },
     );
   }
 
-  const session = await getSession();
-
-  const userId = session?.sub ?? (await prisma.user.findFirst())?.id;
-
-  if (!userId) {
-    return NextResponse.json(
-      { error: 'No user available to own the conversation.' },
-      { status: 401 },
-    );
-  }
-
   const conversation = await prisma.aiConversation.create({
     data: {
-      title,
-      userId,
+      title: parsed.data.title,
+      userId: auth.sub,
     },
   });
 

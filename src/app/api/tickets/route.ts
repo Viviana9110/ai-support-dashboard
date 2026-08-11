@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { getActorId, writeAuditLog } from '@/lib/audit';
 import {
   serializeTicket,
@@ -10,6 +11,12 @@ import {
 import { ticketSchema } from '@/lib/schemas/ticket.schema';
 
 export async function GET() {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const tickets = await prisma.ticket.findMany({
     where: { deletedAt: null },
     orderBy: { updatedAt: 'desc' },
@@ -20,7 +27,22 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: 'Invalid JSON body.' },
+      { status: 400 },
+    );
+  }
 
   const parsed = ticketSchema.safeParse(body);
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { serializeAiMessage } from '@/lib/serializers';
 import { aiMessageSchema } from '@/lib/schemas/ai.schema';
 
@@ -23,6 +24,12 @@ class ConversationNotFoundError extends Error {
 }
 
 export async function POST(request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {
@@ -56,7 +63,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const message = await prisma.$transaction(async (tx) => {
       const conversation = await tx.aiConversation.findUnique({
-        where: { id, deletedAt: null },
+        where: { id, deletedAt: null, userId: auth.sub },
         select: { id: true },
       });
 
@@ -73,7 +80,7 @@ export async function POST(request: Request, context: RouteContext) {
       });
 
       await tx.aiConversation.update({
-        where: { id },
+        where: { id, userId: auth.sub, deletedAt: null },
         data: { updatedAt: new Date() },
       });
 

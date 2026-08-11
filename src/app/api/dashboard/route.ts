@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { formatRelativeTime } from '@/lib/relative-time';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -8,6 +9,12 @@ const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAYS_ON_CHART = 7;
 
 export async function GET() {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const since = new Date(Date.now() - (DAYS_ON_CHART - 1) * 86_400_000);
 
   const [statusGroups, customerCount, articleCount, activeAgentCount, activity, dayRows] =

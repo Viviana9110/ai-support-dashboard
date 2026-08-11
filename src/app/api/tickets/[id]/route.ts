@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { getActorId, writeAuditLog } from '@/lib/audit';
 import {
   serializeTicket,
@@ -15,6 +16,12 @@ import { ticketUpdateSchema } from '@/lib/schemas/ticket.schema';
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   const [ticket, activity] = await Promise.all([
@@ -37,6 +44,12 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   let body: unknown;
@@ -252,6 +265,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   const existing = await prisma.ticket.findUnique({

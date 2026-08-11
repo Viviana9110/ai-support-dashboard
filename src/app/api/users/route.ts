@@ -1,9 +1,16 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import type { User } from '@/services/dashboard.types';
 
 export async function GET() {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const users = await prisma.user.findMany({
     orderBy: { name: 'asc' },
     select: { id: true, name: true, email: true },

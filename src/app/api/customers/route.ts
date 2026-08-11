@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { getActorId, writeAuditLog } from '@/lib/audit';
 import { customerSchema } from '@/lib/schemas/customer.schema';
 import { serializeCustomer, toDBCustomerStatus } from '@/lib/serializers';
 
 export async function GET() {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const customers = await prisma.customer.findMany({
     where: { deletedAt: null },
     orderBy: { name: 'asc' },
@@ -15,7 +22,22 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: 'Invalid JSON body.' },
+      { status: 400 },
+    );
+  }
 
   const parsed = customerSchema.safeParse(body);
 

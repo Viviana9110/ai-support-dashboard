@@ -1,8 +1,28 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
-import { getSession } from '@/lib/auth';
+import { requireSession } from '@/lib/require-session';
+import { knowledgeArticleCreateSchema } from '@/lib/schemas/article.schema';
 import { serializeArticle } from '@/lib/serializers';
+
+import type { ArticleStatus } from '@/generated/prisma/enums';
+
+const ARTICLE_STATUSES: ArticleStatus[] = [
+  'DRAFT',
+  'PUBLISHED',
+  'ARCHIVED',
+];
+
+function normalizeArticleStatus(
+  status: string | undefined,
+): ArticleStatus {
+  const normalized = status?.trim().toUpperCase();
+
+  return normalized &&
+    (ARTICLE_STATUSES as string[]).includes(normalized)
+    ? (normalized as ArticleStatus)
+    : 'DRAFT';
+}
 
 function slugify(title: string): string {
   return title
@@ -13,7 +33,14 @@ function slugify(title: string): string {
 }
 
 export async function GET() {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const articles = await prisma.knowledgeArticle.findMany({
+    where: { deletedAt: null },
     orderBy: { updatedAt: 'desc' },
     include: { author: true },
   });
@@ -22,30 +49,47 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const auth = await requireSession();
 
-  const session = await getSession();
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
 
-  const authorId =
-    body.authorId ?? session?.sub ?? (await prisma.user.findFirst())?.id;
+  let body: unknown;
 
-  if (!authorId) {
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json(
-      { error: 'No user available to author the article.' },
-      { status: 401 },
+      { error: 'Invalid JSON body.' },
+      { status: 400 },
     );
   }
 
+  const parsed = knowledgeArticleCreateSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid article data.' },
+      { status: 400 },
+    );
+  }
+
+  const data = parsed.data;
+
+  const authorId = data.authorId ?? auth.sub;
+  const status = normalizeArticleStatus(data.status);
+
   const article = await prisma.knowledgeArticle.create({
     data: {
-      title: body.title,
-      slug: body.slug ?? slugify(body.title),
-      category: body.category,
-      status: body.status ?? 'DRAFT',
-      content: body.content ?? '',
-      views: body.views ?? 0,
+      title: data.title,
+      slug: data.slug ?? slugify(data.title),
+      category: data.category,
+      status,
+      content: data.content ?? '',
+      views: data.views ?? 0,
       authorId,
-      publishedAt: body.status === 'PUBLISHED' ? new Date() : null,
+      publishedAt: status === 'PUBLISHED' ? new Date() : null,
     },
     include: { author: true },
   });

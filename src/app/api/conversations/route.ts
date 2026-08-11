@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
+import { conversationCreateSchema } from '@/lib/schemas/conversation.schema';
 import { serializeConversation } from '@/lib/serializers';
 
 export async function GET() {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const conversations = await prisma.conversation.findMany({
+    where: { deletedAt: null },
     orderBy: { updatedAt: 'desc' },
     include: {
       customer: true,
@@ -16,24 +25,43 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  const auth = await requireSession();
 
-  if (!body.customerId) {
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
+  let body: unknown;
+
+  try {
+    body = await request.json();
+  } catch {
     return NextResponse.json(
-      { error: 'A customerId is required.' },
+      { error: 'Invalid JSON body.' },
       { status: 400 },
     );
   }
 
+  const parsed = conversationCreateSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid conversation data.' },
+      { status: 400 },
+    );
+  }
+
+  const data = parsed.data;
+
   const conversation = await prisma.conversation.create({
     data: {
-      customerId: body.customerId,
-      avatar: body.avatar ?? '',
-      online: body.online ?? false,
-      unread: body.unread ?? 0,
-      lastMessage: body.lastMessage ?? '',
-      messages: body.messages
-        ? { create: body.messages }
+      customerId: data.customerId,
+      avatar: data.avatar ?? '',
+      online: data.online ?? false,
+      unread: data.unread ?? 0,
+      lastMessage: data.lastMessage ?? '',
+      messages: data.messages
+        ? { create: data.messages }
         : undefined,
     },
     include: {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { renameConversationSchema } from '@/lib/schemas/ai.schema';
 import {
   serializeAiConversation,
@@ -13,6 +14,12 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(_request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {
@@ -23,7 +30,7 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const conversation = await prisma.aiConversation.findUnique({
-    where: { id, deletedAt: null },
+    where: { id, deletedAt: null, userId: auth.sub },
     include: {
       messages: {
         orderBy: { createdAt: 'asc' },
@@ -42,6 +49,12 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {
@@ -75,7 +88,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const existing = await prisma.aiConversation.findUnique({
-    where: { id, deletedAt: null },
+    where: { id, deletedAt: null, userId: auth.sub },
+    select: { id: true },
   });
 
   if (!existing) {
@@ -87,7 +101,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   try {
     const conversation = await prisma.aiConversation.update({
-      where: { id },
+      where: { id, userId: auth.sub, deletedAt: null },
       data: { title: parsed.data.title },
     });
 
@@ -105,6 +119,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {
@@ -115,7 +135,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   const existing = await prisma.aiConversation.findUnique({
-    where: { id, deletedAt: null },
+    where: { id, deletedAt: null, userId: auth.sub },
     select: { id: true },
   });
 
@@ -127,7 +147,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   }
 
   await prisma.aiConversation.update({
-    where: { id },
+    where: { id, userId: auth.sub, deletedAt: null },
     data: { deletedAt: new Date() },
   });
 

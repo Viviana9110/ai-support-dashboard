@@ -5,6 +5,7 @@ import { buildKnowledgeContext } from '@/lib/ai/knowledge-context';
 import { buildSystemPrompt } from '@/lib/ai/system-prompt';
 import { buildTicketContext } from '@/lib/ai/ticket-context';
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { openai } from '@/lib/openai';
 import { serializeAiMessage } from '@/lib/serializers';
 import { aiChatSchema } from '@/lib/schemas/ai.schema';
@@ -26,6 +27,12 @@ class ConversationNotFoundError extends Error {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   let body: unknown;
 
   try {
@@ -50,7 +57,7 @@ export async function POST(request: Request) {
   try {
     const [conversation, articles] = await Promise.all([
       prisma.aiConversation.findUnique({
-        where: { id: conversationId, deletedAt: null },
+        where: { id: conversationId, deletedAt: null, userId: auth.sub },
         select: {
           user: {
             select: {
@@ -147,7 +154,7 @@ export async function POST(request: Request) {
     const { userMessage, assistantMessage } = await prisma.$transaction(
       async (tx) => {
         const conversation = await tx.aiConversation.findUnique({
-          where: { id: conversationId, deletedAt: null },
+          where: { id: conversationId, deletedAt: null, userId: auth.sub },
           select: { id: true },
         });
 
@@ -172,7 +179,7 @@ export async function POST(request: Request) {
         });
 
         await tx.aiConversation.update({
-          where: { id: conversationId },
+          where: { id: conversationId, userId: auth.sub, deletedAt: null },
           data: { updatedAt: new Date() },
         });
 

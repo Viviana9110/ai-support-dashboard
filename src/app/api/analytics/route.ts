@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 
 import type {
   AnalyticsData,
@@ -56,6 +57,12 @@ function formatMinutes(minutes: number): string {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const rawPeriod = request.nextUrl.searchParams.get('period');
   const period: AnalyticsPeriod = PERIODS.includes(rawPeriod as AnalyticsPeriod)
     ? (rawPeriod as AnalyticsPeriod)
@@ -167,7 +174,7 @@ export async function GET(request: NextRequest) {
 
   const totalTickets = bucketRows.reduce((sum, row) => sum + row.count, 0);
   const closedTickets = statusCounts['Closed'];
-  const satisfaction =
+  const resolutionRate =
     totalTickets > 0 ? Math.round((closedTickets / totalTickets) * 100) : 0;
 
   const avgResolution = resolutionTime.length
@@ -176,10 +183,9 @@ export async function GET(request: NextRequest) {
     : 0;
 
   const data: AnalyticsData = {
-    revenue: 0,
     tickets: totalTickets,
     responseTime: formatMinutes(avgResolution),
-    satisfaction,
+    resolutionRate,
     monthlyTickets,
     ticketStatus,
     topAgents,

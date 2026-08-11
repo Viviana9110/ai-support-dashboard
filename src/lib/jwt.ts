@@ -7,9 +7,19 @@ export interface SessionPayload {
   role: string;
 }
 
-const secret = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? 'dev-secret-change-me',
-);
+function getSecretKey(): Uint8Array {
+  const secret = process.env.AUTH_SECRET;
+
+  if (!secret || secret.trim() === '') {
+    throw new Error(
+      'AUTH_SECRET is not set. Add it to your environment variables before starting the app.',
+    );
+  }
+
+  return new TextEncoder().encode(secret);
+}
+
+const secret = getSecretKey();
 
 export const SESSION_COOKIE = 'session';
 

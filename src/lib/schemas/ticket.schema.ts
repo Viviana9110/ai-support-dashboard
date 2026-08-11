@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const ticketSchema = z.object({
   subject: z
     .string()
-    .min(3, 'Subject must have at least 3 characters'),
+    .min(3, 'Subject must have at least 3 characters')
+    .max(200, 'Subject must be 200 characters or less'),
 
   customerId: z.uuid('A valid customer is required'),
 

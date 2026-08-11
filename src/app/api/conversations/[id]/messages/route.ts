@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { serializeMessage } from '@/lib/serializers';
 import { messageSchema } from '@/lib/schemas/conversation.schema';
 
@@ -12,6 +13,12 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {
@@ -45,7 +52,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const message = await prisma.$transaction(async (tx) => {
       await tx.conversation.update({
-        where: { id },
+        where: { id, deletedAt: null },
         data: {
           lastMessage: text,
           ...(dbSender === 'CUSTOMER' && { unread: { increment: 1 } }),

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { requireSession } from '@/lib/require-session';
 import { getActorId, writeAuditLog } from '@/lib/audit';
 import { customerUpdateSchema } from '@/lib/schemas/customer.schema';
 import {
@@ -15,6 +16,12 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(_request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   if (!UUID_REGEX.test(id)) {
@@ -47,6 +54,12 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   let body: unknown;
@@ -204,6 +217,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const auth = await requireSession();
+
+  if (auth instanceof NextResponse) {
+    return auth;
+  }
+
   const { id } = await context.params;
 
   const existing = await prisma.customer.findUnique({
