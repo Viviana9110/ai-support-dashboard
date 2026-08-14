@@ -34,6 +34,7 @@ export interface TxMocks {
   };
   aiMessage: {
     create: Mock;
+    deleteMany: Mock;
   };
 }
 
@@ -82,6 +83,7 @@ export interface DbMocks extends TxMocks {
   };
   aiMessage: {
     create: Mock;
+    deleteMany: Mock;
   };
   $transaction: Mock;
   tx: TxMocks;
@@ -100,7 +102,7 @@ export function createTxMocks(): TxMocks {
     conversation: { update: vi.fn() },
     message: { create: vi.fn() },
     aiConversation: { findUnique: vi.fn(), update: vi.fn() },
-    aiMessage: { create: vi.fn() },
+    aiMessage: { create: vi.fn(), deleteMany: vi.fn() },
   };
 }
 
@@ -141,7 +143,7 @@ export function createPrismaMock(): DbMocks {
       create: vi.fn(),
       update: vi.fn(),
     },
-    aiMessage: { create: vi.fn() },
+    aiMessage: { create: vi.fn(), deleteMany: vi.fn() },
     $transaction: vi.fn(),
     tx,
   };

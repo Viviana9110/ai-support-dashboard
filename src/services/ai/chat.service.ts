@@ -135,3 +135,18 @@ export async function deleteConversation(
 
   return response.json();
 }
+
+export async function clearConversation(
+  id: string,
+): Promise<{ success: boolean; deletedMessages: number }> {
+  const response = await fetch(
+    `/api/ai/conversations/${id}/messages`,
+    { method: 'DELETE' },
+  );
+
+  if (!response.ok) {
+    throw new Error('Unable to clear conversation.');
+  }
+
+  return response.json();
+}

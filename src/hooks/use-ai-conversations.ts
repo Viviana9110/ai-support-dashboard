@@ -4,12 +4,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   createConversation,
+  clearConversation,
   deleteConversation,
   getConversation,
   getConversations,
   renameConversation,
   sendMessage,
 } from "@/services/ai/chat.service";
+
+import type { AiConversationSummary, Conversation } from "@/services/ai/ai.types";
 
 export function useAiConversations() {
   return useQuery({
@@ -32,7 +35,11 @@ export function useCreateAiConversation() {
   return useMutation({
     mutationFn: (title: string) => createConversation(title),
 
-    onSuccess: () => {
+    onSuccess: (created) => {
+      queryClient.setQueryData<AiConversationSummary[]>(
+        ["ai-conversations"],
+        (previous = []) => [created, ...previous.filter((item) => item.id !== created.id)],
+      );
       queryClient.invalidateQueries({
         queryKey: ["ai-conversations"],
       });
@@ -73,7 +80,17 @@ export function useRenameAiConversation() {
       title: string;
     }) => renameConversation(id, title),
 
-    onSuccess: () => {
+    onSuccess: (updated) => {
+      queryClient.setQueryData<AiConversationSummary[]>(
+        ["ai-conversations"],
+        (previous = []) => previous.map((item) =>
+          item.id === updated.id ? { ...item, ...updated } : item,
+        ),
+      );
+      queryClient.setQueryData<Conversation>(
+        ["ai-conversations", updated.id],
+        (previous) => previous ? { ...previous, ...updated } : previous,
+      );
       queryClient.invalidateQueries({
         queryKey: ["ai-conversations"],
       });
@@ -88,7 +105,54 @@ export function useDeleteAiConversation() {
     mutationFn: (id: string) =>
       deleteConversation(id),
 
-    onSuccess: () => {
+    onSuccess: (_result, id) => {
+      queryClient.setQueryData<AiConversationSummary[]>(
+        ["ai-conversations"],
+        (previous = []) => previous.filter((item) => item.id !== id),
+      );
+      queryClient.removeQueries({
+        queryKey: ["ai-conversations", id],
+        exact: true,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["ai-conversations"],
+      });
+    },
+  });
+}
+
+export function useClearAiConversation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => clearConversation(id),
+
+    onSuccess: (_result, id) => {
+      queryClient.setQueryData<Conversation>(
+        ["ai-conversations", id],
+        (previous) => previous
+          ? {
+              ...previous,
+              messages: [],
+              messageCount: 0,
+              lastMessage: null,
+              lastMessageRole: null,
+            }
+          : previous,
+      );
+      queryClient.setQueryData<AiConversationSummary[]>(
+        ["ai-conversations"],
+        (previous = []) => previous.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                messageCount: 0,
+                lastMessage: null,
+                lastMessageRole: null,
+              }
+            : item,
+        ),
+      );
       queryClient.invalidateQueries({
         queryKey: ["ai-conversations"],
       });

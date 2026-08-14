@@ -13,12 +13,52 @@ type StreamHandlers = {
   onError: () => void;
 };
 
-type StreamEvent = {
+export type StreamEvent = {
   type?: string;
   content?: unknown;
   userMessage?: unknown;
   assistantMessage?: unknown;
 };
+
+type StreamEventHandlers = Pick<
+  StreamHandlers,
+  'onDelta' | 'onDone' | 'onError'
+>;
+
+export type StreamEventResult =
+  | 'continue'
+  | 'done'
+  | 'error'
+  | 'stale';
+
+export function handleAiStreamEvent(
+  event: StreamEvent,
+  token: number,
+  currentToken: number,
+  handlers: StreamEventHandlers,
+): StreamEventResult {
+  if (token !== currentToken) return 'stale';
+
+  if (
+    event.type === 'delta' &&
+    typeof event.content === 'string'
+  ) {
+    handlers.onDelta(event.content);
+    return 'continue';
+  }
+
+  if (event.type === 'done') {
+    handlers.onDone(event);
+    return 'done';
+  }
+
+  if (event.type === 'error') {
+    handlers.onError();
+    return 'error';
+  }
+
+  return 'continue';
+}
 
 export function useAiStream() {
   const [isStreaming, setIsStreaming] =
@@ -53,7 +93,7 @@ export function useAiStream() {
       onDelta,
       onDone,
       onError,
-    }: StreamHandlers) => {
+    }: StreamHandlers): Promise<boolean> => {
       streamingToken.current += 1;
       controllerRef.current?.abort();
 
@@ -61,6 +101,8 @@ export function useAiStream() {
       controllerRef.current = controller;
 
       const token = streamingToken.current;
+      let completed = false;
+      let errorReported = false;
 
       setIsStreaming(true);
 
@@ -91,7 +133,7 @@ export function useAiStream() {
           if (token === streamingToken.current) {
             onError();
           }
-          return;
+          return false;
         }
 
         const reader =
@@ -134,29 +176,44 @@ export function useAiStream() {
               continue;
             }
 
-            if (
-              event.type === 'delta' &&
-              typeof event.content ===
-                'string'
-            ) {
-              onDelta(event.content);
-            } else if (event.type === 'done') {
-              if (token === streamingToken.current) {
-                onDone(event);
-              }
+            const result = handleAiStreamEvent(
+              event,
+              token,
+              streamingToken.current,
+              { onDelta, onDone, onError },
+            );
+
+            if (result === 'done') {
+              completed = true;
               break;
-            } else if (event.type === 'error') {
-              if (token === streamingToken.current) {
-                onError();
-              }
+            }
+
+            if (result === 'error') {
+              errorReported = true;
               break;
             }
           }
         }
+
+        if (
+          token === streamingToken.current &&
+          !completed &&
+          !errorReported
+        ) {
+          onError();
+          errorReported = true;
+        }
+
+        return completed;
       } catch {
         if (token === streamingToken.current) {
-          onError();
+          if (!controller.signal.aborted && !errorReported) {
+            onError();
+            errorReported = true;
+          }
         }
+
+        return false;
       } finally {
         if (token === streamingToken.current) {
           setIsStreaming(false);

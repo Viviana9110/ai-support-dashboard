@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { aiRateLimitResponse, checkAiRateLimit } from '@/lib/ai/rate-limit';
 import { requireSession } from '@/lib/require-session';
 import { renameConversationSchema } from '@/lib/schemas/ai.schema';
 import { serializeAiConversation } from '@/lib/serializers';
@@ -37,6 +38,12 @@ export async function POST(request: Request) {
 
   if (auth instanceof NextResponse) {
     return auth;
+  }
+
+  const rateLimitResult = checkAiRateLimit(auth.sub, 'conversations');
+
+  if (!rateLimitResult.allowed) {
+    return aiRateLimitResponse(rateLimitResult.retryAfterSeconds);
   }
 
   let body: unknown;

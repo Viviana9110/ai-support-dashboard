@@ -1,14 +1,18 @@
 type CustomerContextSource = {
+  id: string;
   name: string;
   email: string;
-  role: string;
+  company: string;
+  status: string;
 };
 
 export function buildCustomerContext(customer: CustomerContextSource): string {
   return [
     'Customer',
+    `ID: ${customer.id}`,
     `Name: ${customer.name}`,
     `Email: ${customer.email}`,
-    `Role: ${customer.role}`,
+    `Company: ${customer.company}`,
+    `Status: ${customer.status}`,
   ].join('\n');
 }

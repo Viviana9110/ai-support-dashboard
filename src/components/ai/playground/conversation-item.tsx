@@ -40,6 +40,7 @@ export function ConversationItem({
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(conversation.title);
+  const [error, setError] = useState<string | null>(null);
 
   const renameAiConversation = useRenameAiConversation();
 
@@ -48,16 +49,23 @@ export function ConversationItem({
     setEditing(true);
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!editing) return;
 
     const title = draft.trim();
 
     if (title && title !== conversation.title) {
-      void renameAiConversation.mutateAsync({
-        id: conversation.id,
-        title,
-      });
+      setError(null);
+
+      try {
+        await renameAiConversation.mutateAsync({
+          id: conversation.id,
+          title,
+        });
+      } catch {
+        setError('Unable to rename the conversation. Please try again.');
+        return;
+      }
     }
 
     setEditing(false);
@@ -84,14 +92,14 @@ export function ConversationItem({
         }
       `}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex gap-3">
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="flex min-w-0 gap-3">
           <MessageSquare
             size={18}
             className="mt-1"
           />
 
-          <div>
+          <div className="min-w-0">
             {editing ? (
               <Input
                 autoFocus
@@ -109,7 +117,7 @@ export function ConversationItem({
                   }
                 }}
                 onBlur={handleSubmit}
-                className="h-7 min-w-[180px] px-2 py-1 text-sm"
+                className="h-7 w-full min-w-0 px-2 py-1 text-sm"
               />
             ) : (
               <p className="line-clamp-1 font-medium">
@@ -122,6 +130,12 @@ export function ConversationItem({
                 {conversation.lastMessage}
               </p>
             ) : null}
+
+            {error && (
+              <p role="alert" className="text-destructive text-xs">
+                {error}
+              </p>
+            )}
 
             <p className="text-muted-foreground text-xs">
   {(conversation.messageCount ?? conversation.messages.length) === 0

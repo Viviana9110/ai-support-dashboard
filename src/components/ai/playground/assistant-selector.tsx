@@ -7,17 +7,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { AI_ASSISTANTS } from '@/lib/ai/model-config';
 
 interface Props {
   value: string;
   onChange: (value: string) => void;
 }
-
-const assistants = [
-  'Customer Support AI',
-  'Sales Assistant',
-  'Technical Support',
-];
 
 export function AssistantSelector({
   value,
@@ -38,7 +33,7 @@ export function AssistantSelector({
         </SelectTrigger>
 
         <SelectContent>
-          {assistants.map((assistant) => (
+          {AI_ASSISTANTS.map((assistant) => (
             <SelectItem
               key={assistant}
               value={assistant}

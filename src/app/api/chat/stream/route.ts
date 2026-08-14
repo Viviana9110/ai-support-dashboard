@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { buildCustomerContext } from '@/lib/ai/customer-context';
-import { buildKnowledgeContext } from '@/lib/ai/knowledge-context';
-import { resolveStreamModel } from '@/lib/ai/model-config';
-import { buildSystemPrompt } from '@/lib/ai/system-prompt';
-import { buildTicketContext } from '@/lib/ai/ticket-context';
+import { buildAiChatInput, type AiChatRole } from '@/lib/ai/chat-context';
+import {
+  buildOpenAiModelParameters,
+  resolveAiConfiguration,
+} from '@/lib/ai/model-config';
+import { aiRateLimitResponse, checkAiRateLimit } from '@/lib/ai/rate-limit';
 import { prisma } from '@/lib/db';
 import { openai } from '@/lib/openai';
 import { requireSession } from '@/lib/require-session';
@@ -13,9 +14,7 @@ import { serializeAiMessage } from '@/lib/serializers';
 
 import type { AiMessageRole as DBAiMessageRole } from '@/generated/prisma/enums';
 
-type OpenAIRole = 'user' | 'assistant' | 'system';
-
-const OPENAI_ROLE: Record<DBAiMessageRole, OpenAIRole> = {
+const OPENAI_ROLE: Record<DBAiMessageRole, AiChatRole> = {
   USER: 'user',
   ASSISTANT: 'assistant',
   SYSTEM: 'system',
@@ -42,6 +41,12 @@ export async function POST(request: Request) {
     return auth;
   }
 
+  const rateLimitResult = checkAiRateLimit(auth.sub, 'stream');
+
+  if (!rateLimitResult.allowed) {
+    return aiRateLimitResponse(rateLimitResult.retryAfterSeconds);
+  }
+
   let body: unknown;
 
   try {
@@ -66,17 +71,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const { conversationId, message, assistant, temperature } =
+  const { conversationId, message, assistant, temperature, model: requestedModel } =
     parsed.data;
 
-  const resolution = resolveStreamModel(
-    parsed.data.model,
-  );
+  const resolution = resolveAiConfiguration({
+    assistant,
+    model: requestedModel,
+    temperature,
+  });
 
   if (resolution.status === 'unsupported') {
     return NextResponse.json(
       {
-        error: `Model "${parsed.data.model}" is not supported.`,
+        error: `Model "${requestedModel}" is not supported.`,
       },
       { status: 400 },
     );
@@ -89,7 +96,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const model = resolution.openAiModel;
+  const resolvedAssistant = resolution.assistant;
+  const modelParameters = buildOpenAiModelParameters(resolution);
 
   const conversation =
     await prisma.aiConversation.findUnique({
@@ -120,6 +128,7 @@ export async function POST(request: Request) {
       let timedOut = false;
       let doneEmitted = false;
       let errorEmitted = false;
+      let streamCompleted = false;
 
       const send = (
         payload: Record<string, unknown>,
@@ -169,31 +178,6 @@ export async function POST(request: Request) {
                 deletedAt: null,
               },
               select: {
-                user: {
-                  select: {
-                    name: true,
-                    email: true,
-                    role: true,
-                    ticketsAssigned: {
-                      where: {
-                        status: {
-                          in: ['OPEN', 'PENDING'],
-                        },
-                        deletedAt: null,
-                      },
-                      orderBy: {
-                        updatedAt: 'desc',
-                      },
-                      take: 5,
-                      select: {
-                        subject: true,
-                        status: true,
-                        priority: true,
-                        updatedAt: true,
-                      },
-                    },
-                  },
-                },
                 messages: {
                   orderBy: {
                     createdAt: 'desc',
@@ -229,66 +213,21 @@ export async function POST(request: Request) {
           );
         }
 
-        const tickets =
-          conversation.user?.ticketsAssigned ??
-          [];
-
-        const input: Array<{
-          role: OpenAIRole;
-          content: string;
-        }> = [
-          {
-            role: 'system',
-            content: buildSystemPrompt(
-              assistant,
-            ),
-          },
-          ...(conversation.user
-            ? [
-                {
-                  role: 'system' as const,
-                  content: buildCustomerContext(
-                    conversation.user,
-                  ),
-                },
-              ]
-            : []),
-          ...(articles.length > 0
-            ? [
-                {
-                  role: 'system' as const,
-                  content: buildKnowledgeContext(
-                    articles,
-                  ),
-                },
-              ]
-            : []),
-          ...(tickets.length > 0
-            ? [
-                {
-                  role: 'system' as const,
-                  content: buildTicketContext(
-                    tickets,
-                  ),
-                },
-              ]
-            : []),
-          ...conversation.messages
+        const input = buildAiChatInput({
+          assistant: resolvedAssistant,
+          message,
+          articles,
+          history: conversation.messages
             .reverse()
             .map((m) => ({
               role: OPENAI_ROLE[m.role],
               content: m.content,
             })),
-          {
-            role: 'user',
-            content: message,
-          },
-        ];
+        });
 
         const response = await openai.responses.create(
           {
-            model,
-            temperature,
+            ...modelParameters,
             input,
             stream: true,
           },
@@ -311,6 +250,10 @@ export async function POST(request: Request) {
               content: event.delta,
             });
           }
+
+          if (event.type === 'response.completed') {
+            streamCompleted = true;
+          }
         }
 
         if (abortController.signal.aborted) {
@@ -318,6 +261,10 @@ export async function POST(request: Request) {
             sendError();
           }
           return;
+        }
+
+        if (!streamCompleted || assistantText.trim() === '') {
+          throw new Error('OpenAI stream completed without a response.');
         }
 
         const {

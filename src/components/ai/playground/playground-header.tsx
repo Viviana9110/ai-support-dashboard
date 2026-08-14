@@ -2,7 +2,7 @@
 
 import { Bot } from 'lucide-react';
 
-export function PlaygroundHeader() {
+export function PlaygroundHeader({ model }: { model: string }) {
   return (
     <div className="flex items-center justify-between border-b px-6 py-4">
 
@@ -28,7 +28,7 @@ export function PlaygroundHeader() {
 
       <div className="text-muted-foreground text-sm">
 
-        GPT-5
+        {model}
 
       </div>
 

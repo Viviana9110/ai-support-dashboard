@@ -16,6 +16,7 @@ interface Props {
   onTemperatureChange: (value: number) => void;
 
   onClear: () => void;
+  clearDisabled?: boolean;
 }
 
 export function PlaygroundSidebar({
@@ -26,10 +27,11 @@ export function PlaygroundSidebar({
   onModelChange,
   onTemperatureChange,
   onClear,
+  clearDisabled = false,
 }: Props) {
   return (
-    <aside className="w-80 border-r p-6">
-      <div className="space-y-8">
+    <aside className="w-full shrink-0 border-b p-4 md:w-80 md:border-b-0 md:border-r md:p-6">
+      <div className="grid gap-5 sm:grid-cols-2 md:block md:space-y-8">
 
         <AssistantSelector
           value={assistant}
@@ -48,8 +50,9 @@ export function PlaygroundSidebar({
 
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full sm:col-span-2 md:mt-8"
           onClick={onClear}
+          disabled={clearDisabled}
         >
           Clear Conversation
         </Button>

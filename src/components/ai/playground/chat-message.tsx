@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 
 import { ChatMessage as Message } from '@/services/ai/ai.types';
 import { Markdown } from '@/components/ui/markdown';
-import { useStream } from '@/hooks/use-stream';
 
 interface Props {
   message: Message;
+  streaming?: boolean;
 }
 
 export function ChatMessage({
   message,
+  streaming = false,
 }: Props) {
   const [copied, setCopied] =
     useState(false);
@@ -34,13 +35,7 @@ export function ChatMessage({
   const assistant =
     message.role === 'assistant';
 
-  const streamedContent = useStream(
-    assistant ? message.content : '',
-  );
-
-  const content = assistant
-    ? streamedContent
-    : message.content;
+  const content = message.content;
 
   return (
     <div
@@ -64,7 +59,7 @@ export function ChatMessage({
         )}
       </div>
 
-      <div className="flex-1">
+      <div className="min-w-0 flex-1 overflow-x-auto">
         <div className="mb-2 flex items-center justify-between">
           <h4 className="font-semibold">
             {assistant
@@ -88,11 +83,9 @@ export function ChatMessage({
         </div>
 
       
-        <Markdown>
-    {content}
-</Markdown>
+        <Markdown>{content}</Markdown>
 
-{assistant && (
+{assistant && streaming && (
     <span
         className="
             ml-1

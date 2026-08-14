@@ -7,18 +7,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { AI_STREAM_MODELS } from '@/lib/ai/model-config';
 
 interface Props {
   value: string;
   onChange: (value: string) => void;
 }
-
-const models = [
-  'GPT-5',
-  'GPT-5 Mini',
-  'Claude Sonnet',
-  'Gemini 2.5 Pro',
-];
 
 export function ModelSelector({
   value,
@@ -39,7 +33,7 @@ export function ModelSelector({
         </SelectTrigger>
 
         <SelectContent>
-          {models.map((model) => (
+          {AI_STREAM_MODELS.map((model) => (
             <SelectItem
               key={model}
               value={model}

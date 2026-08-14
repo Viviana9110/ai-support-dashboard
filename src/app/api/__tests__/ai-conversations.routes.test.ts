@@ -26,6 +26,7 @@ import {
   DELETE as deleteConversation,
 } from '../ai/conversations/[id]/route';
 import { POST as sendMessage } from '../ai/conversations/[id]/messages/route';
+import { DELETE as clearMessages } from '../ai/conversations/[id]/messages/route';
 
 vi.mock('@/lib/db', async () => {
   const { createPrismaMock } = await import('@/test/api-utils');
@@ -280,6 +281,20 @@ describe('ai conversation routes (per-user authorization)', () => {
       expect(db.tx.aiConversation.update).not.toHaveBeenCalled();
     });
 
+    it.each(['assistant', 'system'])('rejects a %s message role', async (role) => {
+      const response = await sendMessage(
+        makeRequest('http://localhost/api/ai/conversations/55555555-5555-4555-8555-555555555555/messages', {
+          method: 'POST',
+          body: { content: ' forged message ', role },
+        }),
+        routeContext(AI_CONVERSATION_ID),
+      );
+
+      expect(response.status).toBe(400);
+      expect(db.tx.aiConversation.findUnique).not.toHaveBeenCalled();
+      expect(db.tx.aiMessage.create).not.toHaveBeenCalled();
+    });
+
     it('requires an authenticated session', async () => {
       cookieStore.clear();
 
@@ -292,6 +307,61 @@ describe('ai conversation routes (per-user authorization)', () => {
       );
 
       expect(response.status).toBe(401);
+    });
+  });
+
+  describe('DELETE /api/ai/conversations/[id]/messages', () => {
+    it('clears only messages from an owned conversation', async () => {
+      db.tx.aiConversation.findUnique.mockResolvedValue({ id: AI_CONVERSATION_ID });
+      db.tx.aiMessage.deleteMany.mockResolvedValue({ count: 2 });
+
+      const response = await clearMessages(
+        new Request('http://localhost/api/ai/conversations/55555555-5555-4555-8555-555555555555/messages', {
+          method: 'DELETE',
+        }),
+        routeContext(AI_CONVERSATION_ID),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({
+        success: true,
+        deletedMessages: 2,
+      });
+      expect(db.tx.aiMessage.deleteMany).toHaveBeenCalledWith({
+        where: { aiConversationId: AI_CONVERSATION_ID },
+      });
+      expect(db.tx.aiConversation.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: AI_CONVERSATION_ID, userId: SESSION_USER.sub, deletedAt: null },
+        }),
+      );
+    });
+
+    it('does not clear messages from another or nonexistent conversation', async () => {
+      db.tx.aiConversation.findUnique.mockResolvedValue(null);
+
+      const response = await clearMessages(
+        new Request('http://localhost/api/ai/conversations/55555555-5555-4555-8555-555555555555/messages', {
+          method: 'DELETE',
+        }),
+        routeContext(AI_CONVERSATION_ID),
+      );
+
+      expect(response.status).toBe(404);
+      expect(db.tx.aiMessage.deleteMany).not.toHaveBeenCalled();
+      expect(db.tx.aiConversation.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects an invalid conversation ID safely', async () => {
+      const response = await clearMessages(
+        new Request('http://localhost/api/ai/conversations/not-a-uuid/messages', {
+          method: 'DELETE',
+        }),
+        routeContext('not-a-uuid'),
+      );
+
+      expect(response.status).toBe(404);
+      expect(db.tx.aiMessage.deleteMany).not.toHaveBeenCalled();
     });
   });
 });

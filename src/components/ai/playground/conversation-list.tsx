@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
+import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 
@@ -26,9 +27,17 @@ export function ConversationList({
   onNew,
 }: Props) {
   const deleteAiConversation = useDeleteAiConversation();
+  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
-    await deleteAiConversation.mutateAsync(id);
+    setError(null);
+
+    try {
+      await deleteAiConversation.mutateAsync(id);
+    } catch {
+      setError('Unable to delete the conversation. Please try again.');
+      return;
+    }
 
     const remaining = conversations.filter(
       (conversation) =>
@@ -41,7 +50,7 @@ export function ConversationList({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex max-h-48 min-h-0 flex-col md:h-full md:max-h-none">
       <Button
         className="mb-6 w-full"
         onClick={onNew}
@@ -51,7 +60,13 @@ export function ConversationList({
         New Chat
       </Button>
 
-      <div className="space-y-3 overflow-y-auto">
+      {error && (
+        <p role="alert" className="text-destructive mb-4 text-sm">
+          {error}
+        </p>
+      )}
+
+      <div className="min-h-0 space-y-3 overflow-y-auto">
         {conversations.map((conversation) => (
           <ConversationItem
             key={conversation.id}

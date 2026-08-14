@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { buildCustomerContext } from '@/lib/ai/customer-context';
-import { buildKnowledgeContext } from '@/lib/ai/knowledge-context';
-import { buildSystemPrompt } from '@/lib/ai/system-prompt';
-import { buildTicketContext } from '@/lib/ai/ticket-context';
+import { buildAiChatInput, type AiChatRole } from '@/lib/ai/chat-context';
+import {
+  buildOpenAiModelParameters,
+  resolveAiConfiguration,
+} from '@/lib/ai/model-config';
+import { aiRateLimitResponse, checkAiRateLimit } from '@/lib/ai/rate-limit';
 import { prisma } from '@/lib/db';
 import { requireSession } from '@/lib/require-session';
 import { openai } from '@/lib/openai';
@@ -12,9 +14,7 @@ import { aiChatSchema } from '@/lib/schemas/ai.schema';
 
 import type { AiMessageRole as DBAiMessageRole } from '@/generated/prisma/enums';
 
-type OpenAIRole = 'user' | 'assistant' | 'system';
-
-const OPENAI_ROLE: Record<DBAiMessageRole, OpenAIRole> = {
+const OPENAI_ROLE: Record<DBAiMessageRole, AiChatRole> = {
   USER: 'user',
   ASSISTANT: 'assistant',
   SYSTEM: 'system',
@@ -31,6 +31,12 @@ export async function POST(request: Request) {
 
   if (auth instanceof NextResponse) {
     return auth;
+  }
+
+  const rateLimitResult = checkAiRateLimit(auth.sub, 'chat');
+
+  if (!rateLimitResult.allowed) {
+    return aiRateLimitResponse(rateLimitResult.retryAfterSeconds);
   }
 
   let body: unknown;
@@ -50,36 +56,41 @@ export async function POST(request: Request) {
     );
   }
 
-  const { conversationId, message } = parsed.data;
+  const {
+    conversationId,
+    message,
+    assistant,
+    model,
+    temperature,
+  } = parsed.data;
 
-  let input: Array<{ role: OpenAIRole; content: string }>;
+  const configuration = resolveAiConfiguration({
+    assistant,
+    model,
+    temperature,
+  });
+
+  if (configuration.status === 'unsupported') {
+    return NextResponse.json(
+      { error: `Model "${model}" is not supported.` },
+      { status: 400 },
+    );
+  }
+
+  if (configuration.status === 'unconfigured') {
+    return NextResponse.json(
+      { error: 'Model configuration error.' },
+      { status: 500 },
+    );
+  }
+
+  let input: Array<{ role: AiChatRole; content: string }>;
 
   try {
     const [conversation, articles] = await Promise.all([
       prisma.aiConversation.findUnique({
         where: { id: conversationId, deletedAt: null, userId: auth.sub },
         select: {
-          user: {
-            select: {
-              name: true,
-              email: true,
-              role: true,
-              ticketsAssigned: {
-                where: {
-                  status: { in: ['OPEN', 'PENDING'] },
-                  deletedAt: null,
-                },
-                orderBy: { updatedAt: 'desc' },
-                take: 5,
-                select: {
-                  subject: true,
-                  status: true,
-                  priority: true,
-                  updatedAt: true,
-                },
-              },
-            },
-          },
           messages: {
             orderBy: { createdAt: 'desc' },
             take: 20,
@@ -102,27 +113,17 @@ export async function POST(request: Request) {
       );
     }
 
-    const tickets = conversation.user?.ticketsAssigned ?? [];
-
-    input = [
-      { role: 'system', content: buildSystemPrompt() },
-      ...(conversation.user
-        ? [{ role: 'system' as const, content: buildCustomerContext(conversation.user) }]
-        : []),
-      ...(articles.length > 0
-        ? [{ role: 'system' as const, content: buildKnowledgeContext(articles) }]
-        : []),
-      ...(tickets.length > 0
-        ? [{ role: 'system' as const, content: buildTicketContext(tickets) }]
-        : []),
-      ...conversation.messages
+    input = buildAiChatInput({
+      assistant: configuration.assistant,
+      message,
+      articles,
+      history: conversation.messages
         .reverse()
         .map((m) => ({
           role: OPENAI_ROLE[m.role],
           content: m.content,
         })),
-      { role: 'user', content: message },
-    ];
+    });
   } catch (error) {
     console.error(error);
 
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
 
   try {
     const response = await openai.responses.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-5',
+      ...buildOpenAiModelParameters(configuration),
       input,
     });
 

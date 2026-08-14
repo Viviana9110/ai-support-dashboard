@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import {
   useAiConversation,
   useAiConversations,
+  useClearAiConversation,
   useCreateAiConversation,
 } from '@/hooks/use-ai-conversations';
 
@@ -29,6 +30,7 @@ import {
   ChatMessage,
   Conversation,
 } from '@/services/ai/ai.types';
+import { resolveActiveConversationId } from '@/lib/ai/conversation-state';
 
 export function AIPlayground() {
   const {
@@ -49,9 +51,18 @@ export function AIPlayground() {
 
   const [activeConversationId, setActiveConversationId] =
     useState('');
+  const [activeConversationHydrated, setActiveConversationHydrated] =
+    useState(false);
 
   const [streamingText, setStreamingText] =
     useState('');
+  const [streamError, setStreamError] =
+    useState<string | null>(null);
+  const [failedPrompt, setFailedPrompt] =
+    useState<string | null>(null);
+  const [mutationError, setMutationError] =
+    useState<string | null>(null);
+  const [inputResetKey, setInputResetKey] = useState(0);
 
   const { startStream, cancelStream, isStreaming } =
     useAiStream();
@@ -59,11 +70,14 @@ export function AIPlayground() {
   useEffect(() => {
     cancelStream();
     setStreamingText('');
+    setStreamError(null);
+    setFailedPrompt(null);
   }, [activeConversationId, cancelStream]);
 
   const queryClient = useQueryClient();
 
   const createAiConversation = useCreateAiConversation();
+  const clearAiConversation = useClearAiConversation();
 
   const {
     data: detail,
@@ -71,6 +85,38 @@ export function AIPlayground() {
     isError: isDetailError,
     refetch: refetchDetail,
   } = useAiConversation(activeConversationId);
+
+  useEffect(() => {
+    try {
+      setActiveConversationId(
+        window.localStorage.getItem('ai-active-conversation') ?? '',
+      );
+    } catch {
+      setActiveConversationId('');
+    } finally {
+      setActiveConversationHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !activeConversationHydrated) return;
+
+    const nextId = resolveActiveConversationId(data, activeConversationId);
+
+    if (nextId !== activeConversationId) {
+      setActiveConversationId(nextId);
+    }
+
+    try {
+      if (nextId) {
+        window.localStorage.setItem('ai-active-conversation', nextId);
+      } else {
+        window.localStorage.removeItem('ai-active-conversation');
+      }
+    } catch {
+      // localStorage may be unavailable in private browsing contexts.
+    }
+  }, [activeConversationHydrated, activeConversationId, data, isLoading]);
 
   const conversations: ChatConversation[] = data.map(
     (conversation) => ({
@@ -101,7 +147,9 @@ export function AIPlayground() {
   async function handleSend(prompt: string) {
     if (!activeConversationId) return;
 
-    startStream({
+    setStreamError(null);
+
+    const completed = await startStream({
       conversationId: activeConversationId,
       message: prompt,
       model,
@@ -124,6 +172,7 @@ export function AIPlayground() {
             | undefined;
 
         setStreamingText('');
+        setFailedPrompt(null);
 
         if (userMessage && assistantMessage) {
           queryClient.setQueryData<Conversation>(
@@ -169,26 +218,51 @@ export function AIPlayground() {
       },
       onError() {
         setStreamingText('');
+        setStreamError('Unable to complete the response. Please try again.');
+        setFailedPrompt(prompt);
       },
     });
+
+    if (!completed) {
+      throw new Error('AI stream failed.');
+    }
   }
 
   async function handleNewConversation() {
-    const created = await createAiConversation.mutateAsync('New Chat');
+    setMutationError(null);
 
-    setActiveConversationId(created.id);
+    try {
+      const created = await createAiConversation.mutateAsync('New Chat');
+
+      setActiveConversationId(created.id);
+    } catch {
+      setMutationError('Unable to create the conversation. Please try again.');
+    }
   }
 
-  function handleClear() {
+  async function handleClear() {
     if (!activeConversationId) return;
 
-    queryClient.setQueryData<Conversation>(
-      ['ai-conversations', activeConversationId],
-      (previous) =>
-        previous
-          ? { ...previous, messages: [] }
-          : previous,
-    );
+    if (isStreaming) return;
+
+    setMutationError(null);
+
+    try {
+      await clearAiConversation.mutateAsync(activeConversationId);
+    } catch {
+      setMutationError('Unable to clear the conversation. Please try again.');
+    }
+  }
+
+  async function handleRetry() {
+    if (!failedPrompt) return;
+
+    try {
+      await handleSend(failedPrompt);
+      setInputResetKey((previous) => previous + 1);
+    } catch {
+      // Keep the failed prompt available for another retry.
+    }
   }
 
   if (isLoading) {
@@ -240,9 +314,14 @@ export function AIPlayground() {
   if (data.length === 0) {
     return (
       <Card className="overflow-hidden">
-        <PlaygroundHeader />
+        <PlaygroundHeader model={model} />
 
-        <div className="flex h-[700px] items-center justify-center p-8">
+        <div className="flex h-[700px] flex-col items-center justify-center gap-4 p-8">
+          {mutationError && (
+            <p role="alert" className="text-destructive text-sm">
+              {mutationError}
+            </p>
+          )}
           <EmptyState
             icon={MessageSquare}
             title="No conversations yet"
@@ -260,11 +339,29 @@ export function AIPlayground() {
   }
 
   return (
-    <Card className="overflow-hidden">
-      <PlaygroundHeader />
+    <Card className="min-w-0 overflow-hidden">
+      <PlaygroundHeader model={model} />
 
-      <div className="flex h-[700px]">
-        <div className="w-72 border-r p-4">
+      {(streamError || mutationError) && (
+        <div className="border-b px-6 py-3 text-sm" role="alert">
+          <p className="text-destructive">
+            {streamError ?? mutationError}
+          </p>
+          {streamError && failedPrompt && (
+            <Button
+              className="mt-2"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleRetry()}
+            >
+              Retry
+            </Button>
+          )}
+        </div>
+      )}
+
+      <div className="flex h-[700px] max-h-[calc(100dvh-8rem)] min-h-[520px] min-w-0 flex-col md:flex-row">
+        <div className="w-full shrink-0 border-b p-3 md:w-72 md:border-b-0 md:border-r md:p-4">
           <ConversationList
             conversations={conversations}
             activeId={activeConversationId}
@@ -281,18 +378,21 @@ export function AIPlayground() {
           onModelChange={setModel}
           onTemperatureChange={setTemperature}
           onClear={handleClear}
+          clearDisabled={isStreaming}
         />
 
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <ChatWindow
             messages={messages}
+            streamingMessageId={streamedMessage?.id}
             loading={isStreaming && streamingText.length === 0}
           />
 
-          <PromptInput
-            onSend={handleSend}
-            disabled={isStreaming}
-          />
+            <PromptInput
+              onSend={handleSend}
+              disabled={isStreaming}
+              resetKey={inputResetKey}
+            />
         </div>
       </div>
     </Card>
