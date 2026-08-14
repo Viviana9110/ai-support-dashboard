@@ -33,7 +33,8 @@ export function useCreateAiConversation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (title: string) => createConversation(title),
+    mutationFn: (payload: string | { title: string; customerId?: string | null }) =>
+      createConversation(payload),
 
     onSuccess: (created) => {
       queryClient.setQueryData<AiConversationSummary[]>(
@@ -75,10 +76,12 @@ export function useRenameAiConversation() {
     mutationFn: ({
       id,
       title,
+      customerId,
     }: {
       id: string;
       title: string;
-    }) => renameConversation(id, title),
+      customerId?: string | null;
+    }) => renameConversation(id, title, customerId),
 
     onSuccess: (updated) => {
       queryClient.setQueryData<AiConversationSummary[]>(

@@ -6,6 +6,7 @@ const conversations = [
   {
     id: 'conversation-1',
     title: 'First',
+    customerId: null,
     createdAt: '',
     updatedAt: '',
     messageCount: 0,
@@ -15,6 +16,7 @@ const conversations = [
   {
     id: 'conversation-2',
     title: 'Second',
+    customerId: null,
     createdAt: '',
     updatedAt: '',
     messageCount: 0,

@@ -285,6 +285,7 @@ export function serializeArticle(dbArticle: {
 export interface AiConversationSummary {
   id: string;
   title: string;
+  customerId: string | null;
   createdAt: string;
   updatedAt: string;
   messageCount: number;
@@ -295,6 +296,7 @@ export interface AiConversationSummary {
 export function serializeAiConversation(dbAiConversation: {
   id: string;
   title: string;
+  customerId?: string | null;
   createdAt: Date;
   updatedAt: Date;
   _count?: { messages: number };
@@ -307,6 +309,7 @@ export function serializeAiConversation(dbAiConversation: {
   return {
     id: dbAiConversation.id,
     title: dbAiConversation.title,
+    customerId: dbAiConversation.customerId ?? null,
     createdAt: dbAiConversation.createdAt.toISOString(),
     updatedAt: dbAiConversation.updatedAt.toISOString(),
     messageCount:

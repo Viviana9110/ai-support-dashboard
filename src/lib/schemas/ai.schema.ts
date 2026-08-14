@@ -84,6 +84,14 @@ export const aiStreamChatSchema = z.object({
     .default(DEFAULT_AI_TEMPERATURE),
 });
 
+export const createAiConversationSchema = renameConversationSchema.extend({
+  customerId: z.uuid('Customer ID must be a valid UUID').nullable().optional(),
+});
+
+export const updateAiConversationSchema = renameConversationSchema.extend({
+  customerId: z.uuid('Customer ID must be a valid UUID').nullable().optional(),
+});
+
 export type AiStreamChatPayload = z.infer<
   typeof aiStreamChatSchema
 >;

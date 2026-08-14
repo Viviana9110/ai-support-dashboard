@@ -88,8 +88,53 @@ describe('ai conversation routes (per-user authorization)', () => {
       expect(await response.json()).toMatchObject({ id: AI_CONVERSATION_ID });
 
       expect(db.aiConversation.create).toHaveBeenCalledWith({
-        data: { title: 'Help with login', userId: SESSION_USER.sub },
+        data: {
+          title: 'Help with login',
+          userId: SESSION_USER.sub,
+          customerId: null,
+        },
       });
+    });
+
+    it('associates an existing customer with the conversation', async () => {
+      const customerId = '82f2d574-2b68-49de-bcc7-c6d72fadc631';
+      db.customer.findUnique.mockResolvedValue({ id: customerId });
+      db.aiConversation.create.mockResolvedValue(
+        dbAiConversationRow({ customerId }),
+      );
+
+      const response = await createConversation(
+        makeRequest('http://localhost/api/ai/conversations', {
+          method: 'POST',
+          body: { title: 'Customer chat', customerId },
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      expect(db.aiConversation.create).toHaveBeenCalledWith({
+        data: {
+          title: 'Customer chat',
+          userId: SESSION_USER.sub,
+          customerId,
+        },
+      });
+    });
+
+    it('rejects a nonexistent customer', async () => {
+      db.customer.findUnique.mockResolvedValue(null);
+
+      const response = await createConversation(
+        makeRequest('http://localhost/api/ai/conversations', {
+          method: 'POST',
+          body: {
+            title: 'Invalid customer chat',
+            customerId: '82f2d574-2b68-49de-bcc7-c6d72fadc631',
+          },
+        }),
+      );
+
+      expect(response.status).toBe(404);
+      expect(db.aiConversation.create).not.toHaveBeenCalled();
     });
 
     it('rejects an empty title', async () => {
@@ -176,6 +221,46 @@ describe('ai conversation routes (per-user authorization)', () => {
         makeRequest('http://localhost/api/ai/conversations/55555555-5555-4555-8555-555555555555', {
           method: 'PATCH',
           body: { title: 'Hijacked' },
+        }),
+        routeContext(AI_CONVERSATION_ID),
+      );
+
+      expect(response.status).toBe(404);
+      expect(db.aiConversation.update).not.toHaveBeenCalled();
+    });
+
+    it('persists a customer context on an owned conversation', async () => {
+      const customerId = '82f2d574-2b68-49de-bcc7-c6d72fadc631';
+      db.aiConversation.findUnique.mockResolvedValue({ id: AI_CONVERSATION_ID });
+      db.customer.findFirst.mockResolvedValue({ id: customerId });
+      db.aiConversation.update.mockResolvedValue(
+        dbAiConversationRow({ customerId }),
+      );
+
+      const response = await updateConversation(
+        makeRequest('http://localhost/api/ai/conversations/55555555-5555-4555-8555-555555555555', {
+          method: 'PATCH',
+          body: { title: 'Customer chat', customerId },
+        }),
+        routeContext(AI_CONVERSATION_ID),
+      );
+
+      expect(response.status).toBe(200);
+      expect(db.aiConversation.update).toHaveBeenCalledWith({
+        where: { id: AI_CONVERSATION_ID, userId: SESSION_USER.sub, deletedAt: null },
+        data: { title: 'Customer chat', customerId },
+      });
+    });
+
+    it('rejects a nonexistent customer context', async () => {
+      const customerId = '82f2d574-2b68-49de-bcc7-c6d72fadc631';
+      db.aiConversation.findUnique.mockResolvedValue({ id: AI_CONVERSATION_ID });
+      db.customer.findFirst.mockResolvedValue(null);
+
+      const response = await updateConversation(
+        makeRequest('http://localhost/api/ai/conversations/55555555-5555-4555-8555-555555555555', {
+          method: 'PATCH',
+          body: { title: 'Invalid customer chat', customerId },
         }),
         routeContext(AI_CONVERSATION_ID),
       );

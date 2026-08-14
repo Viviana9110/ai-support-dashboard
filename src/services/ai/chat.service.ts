@@ -35,7 +35,7 @@ export async function sendMessage(payload: {
 }
 
 export async function createConversation(
-  title: string,
+  payload: string | { title: string; customerId?: string | null },
 ): Promise<AiConversationSummary> {
   const response = await fetch(
     '/api/ai/conversations',
@@ -47,7 +47,9 @@ export async function createConversation(
           'application/json',
       },
 
-      body: JSON.stringify({ title }),
+      body: JSON.stringify(
+        typeof payload === 'string' ? { title: payload } : payload,
+      ),
     },
   );
 
@@ -93,6 +95,7 @@ export async function getConversation(
 export async function renameConversation(
   id: string,
   title: string,
+  customerId?: string | null,
 ): Promise<AiConversationSummary> {
   const response = await fetch(
     `/api/ai/conversations/${id}`,
@@ -104,7 +107,7 @@ export async function renameConversation(
           'application/json',
       },
 
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, ...(customerId !== undefined ? { customerId } : {}) }),
     },
   );
 

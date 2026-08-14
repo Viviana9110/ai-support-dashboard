@@ -15,6 +15,7 @@ export interface TxMocks {
     create: Mock;
     update: Mock;
     findUnique: Mock;
+    findFirst: Mock;
   };
   user: {
     findUnique: Mock;
@@ -57,6 +58,7 @@ export interface DbMocks extends TxMocks {
   customer: {
     findMany: Mock;
     findUnique: Mock;
+    findFirst: Mock;
     create: Mock;
     update: Mock;
   };
@@ -96,6 +98,7 @@ export function createTxMocks(): TxMocks {
       create: vi.fn(),
       update: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
     },
     user: { findUnique: vi.fn() },
     auditLog: { create: vi.fn() },
@@ -121,6 +124,7 @@ export function createPrismaMock(): DbMocks {
     customer: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -362,6 +366,7 @@ export function dbAiConversationRow(overrides: Record<string, unknown> = {}) {
   return {
     id: AI_CONVERSATION_ID,
     title: 'Help with login',
+    customerId: null,
     createdAt: minutesAgo(60),
     updatedAt: minutesAgo(5),
     _count: { messages: 2 },

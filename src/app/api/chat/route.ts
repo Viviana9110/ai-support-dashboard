@@ -91,6 +91,28 @@ export async function POST(request: Request) {
       prisma.aiConversation.findUnique({
         where: { id: conversationId, deletedAt: null, userId: auth.sub },
         select: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              company: true,
+              status: true,
+              tickets: {
+                where: {
+                  deletedAt: null,
+                },
+                orderBy: { updatedAt: 'desc' },
+                take: 5,
+                select: {
+                  subject: true,
+                  status: true,
+                  priority: true,
+                  updatedAt: true,
+                },
+              },
+            },
+          },
           messages: {
             orderBy: { createdAt: 'desc' },
             take: 20,
@@ -117,6 +139,14 @@ export async function POST(request: Request) {
       assistant: configuration.assistant,
       message,
       articles,
+      customer: conversation.customer ?? undefined,
+      tickets: conversation.customer?.tickets.map((ticket) => ({
+        ...ticket,
+        customer: {
+          id: conversation.customer!.id,
+          name: conversation.customer!.name,
+        },
+      })),
       history: conversation.messages
         .reverse()
         .map((m) => ({

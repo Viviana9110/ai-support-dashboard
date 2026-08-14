@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { aiRateLimitResponse, checkAiRateLimit } from '@/lib/ai/rate-limit';
 import { requireSession } from '@/lib/require-session';
-import { renameConversationSchema } from '@/lib/schemas/ai.schema';
+import { createAiConversationSchema } from '@/lib/schemas/ai.schema';
 import { serializeAiConversation } from '@/lib/serializers';
 
 export async function GET() {
@@ -21,6 +21,7 @@ export async function GET() {
       title: true,
       createdAt: true,
       updatedAt: true,
+      customerId: true,
       _count: { select: { messages: true } },
       messages: {
         orderBy: { createdAt: 'desc' },
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const parsed = renameConversationSchema.safeParse(body);
+  const parsed = createAiConversationSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -66,10 +67,25 @@ export async function POST(request: Request) {
     );
   }
 
+  if (parsed.data.customerId) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: parsed.data.customerId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!customer) {
+      return NextResponse.json(
+        { error: 'Customer not found.' },
+        { status: 404 },
+      );
+    }
+  }
+
   const conversation = await prisma.aiConversation.create({
     data: {
       title: parsed.data.title,
       userId: auth.sub,
+      customerId: parsed.data.customerId ?? null,
     },
   });
 

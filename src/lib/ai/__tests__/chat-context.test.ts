@@ -25,6 +25,13 @@ const tickets = [
     updatedAt: new Date('2026-08-13T10:00:00Z'),
     customer: { id: 'customer-2', name: 'Customer Two' },
   },
+  {
+    subject: 'Closed customer one ticket',
+    status: 'CLOSED' as const,
+    priority: 'MEDIUM' as const,
+    updatedAt: new Date('2026-08-13T10:00:00Z'),
+    customer: { id: 'customer-1', name: 'Customer One' },
+  },
 ];
 
 const articles = [
@@ -49,6 +56,7 @@ describe('shared AI chat context', () => {
     const text = input.map((item) => item.content).join('\n');
 
     expect(text).toContain('Customer one ticket');
+    expect(text).toContain('Closed customer one ticket');
     expect(text).not.toContain('Customer two ticket');
     expect(text).toContain('Name: Customer One');
   });
@@ -81,5 +89,20 @@ describe('shared AI chat context', () => {
     };
 
     expect(buildAiChatInput(args)).toEqual(buildAiChatInput(args));
+  });
+
+  it('keeps OPEN, PENDING, and CLOSED tickets for the selected Customer', () => {
+    const text = buildAiChatInput({
+      assistant: 'Customer Support AI',
+      message: 'What is the status of my ticket?',
+      history: [],
+      articles: [],
+      customer,
+      tickets,
+    }).map((item) => item.content).join('\n');
+
+    expect(text).toContain('Customer one ticket');
+    expect(text).toContain('Closed customer one ticket');
+    expect(text).not.toContain('Customer two ticket');
   });
 });

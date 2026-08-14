@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
 import { requireSession } from '@/lib/require-session';
-import { renameConversationSchema } from '@/lib/schemas/ai.schema';
+import { updateAiConversationSchema } from '@/lib/schemas/ai.schema';
 import {
   serializeAiConversation,
   serializeAiConversationDetail,
@@ -75,7 +75,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const parsed = renameConversationSchema.safeParse(body);
+  const parsed = updateAiConversationSchema.safeParse(body);
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -99,10 +99,34 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  if (parsed.data.customerId) {
+    const customer = await prisma.customer.findFirst({
+      where: { id: parsed.data.customerId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!customer) {
+      return NextResponse.json(
+        { error: 'Customer not found.' },
+        { status: 404 },
+      );
+    }
+  }
+
+  const hasCustomerId = Object.prototype.hasOwnProperty.call(
+    parsed.data,
+    'customerId',
+  );
+
   try {
     const conversation = await prisma.aiConversation.update({
       where: { id, userId: auth.sub, deletedAt: null },
-      data: { title: parsed.data.title },
+      data: {
+        title: parsed.data.title,
+        ...(hasCustomerId
+          ? { customerId: parsed.data.customerId ?? null }
+          : {}),
+      },
     });
 
     return NextResponse.json(

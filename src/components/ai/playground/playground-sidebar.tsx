@@ -6,14 +6,20 @@ import { AssistantSelector } from './assistant-selector';
 import { ModelSelector } from './model-selector';
 import { TemperatureSlider } from './temperature-slider';
 
+import type { Customer } from '@/services/customers/customers.types';
+import { CustomerSelector } from './customer-selector';
+
 interface Props {
   assistant: string;
   model: string;
   temperature: number;
+  customerId: string | null;
+  customers: Customer[];
 
   onAssistantChange: (value: string) => void;
   onModelChange: (value: string) => void;
   onTemperatureChange: (value: number) => void;
+  onCustomerChange: (value: string | null) => void;
 
   onClear: () => void;
   clearDisabled?: boolean;
@@ -23,9 +29,12 @@ export function PlaygroundSidebar({
   assistant,
   model,
   temperature,
+  customerId,
+  customers,
   onAssistantChange,
   onModelChange,
   onTemperatureChange,
+  onCustomerChange,
   onClear,
   clearDisabled = false,
 }: Props) {
@@ -46,6 +55,12 @@ export function PlaygroundSidebar({
         <TemperatureSlider
           value={temperature}
           onChange={onTemperatureChange}
+        />
+
+        <CustomerSelector
+          value={customerId}
+          customers={customers}
+          onChange={onCustomerChange}
         />
 
         <Button

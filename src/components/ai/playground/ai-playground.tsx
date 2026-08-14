@@ -15,6 +15,7 @@ import {
   useAiConversations,
   useClearAiConversation,
   useCreateAiConversation,
+  useRenameAiConversation,
 } from '@/hooks/use-ai-conversations';
 
 import { useAiStream } from '@/hooks/use-ai-stream';
@@ -31,6 +32,7 @@ import {
   Conversation,
 } from '@/services/ai/ai.types';
 import { resolveActiveConversationId } from '@/lib/ai/conversation-state';
+import { useCustomers } from '@/hooks/use-customers';
 
 export function AIPlayground() {
   const {
@@ -48,6 +50,7 @@ export function AIPlayground() {
 
   const [temperature, setTemperature] =
     useState(0.7);
+  const [customerId, setCustomerId] = useState<string | null>(null);
 
   const [activeConversationId, setActiveConversationId] =
     useState('');
@@ -78,6 +81,8 @@ export function AIPlayground() {
 
   const createAiConversation = useCreateAiConversation();
   const clearAiConversation = useClearAiConversation();
+  const updateAiConversation = useRenameAiConversation();
+  const { data: customers = [] } = useCustomers();
 
   const {
     data: detail,
@@ -106,6 +111,11 @@ export function AIPlayground() {
     if (nextId !== activeConversationId) {
       setActiveConversationId(nextId);
     }
+
+    const activeConversation = data.find(
+      (conversation) => conversation.id === nextId,
+    );
+    setCustomerId(activeConversation?.customerId ?? null);
 
     try {
       if (nextId) {
@@ -232,7 +242,10 @@ export function AIPlayground() {
     setMutationError(null);
 
     try {
-      const created = await createAiConversation.mutateAsync('New Chat');
+      const created = await createAiConversation.mutateAsync({
+        title: 'New Chat',
+        customerId,
+      });
 
       setActiveConversationId(created.id);
     } catch {
@@ -251,6 +264,31 @@ export function AIPlayground() {
       await clearAiConversation.mutateAsync(activeConversationId);
     } catch {
       setMutationError('Unable to clear the conversation. Please try again.');
+    }
+  }
+
+  async function handleCustomerChange(nextCustomerId: string | null) {
+    setCustomerId(nextCustomerId);
+
+    if (!activeConversationId) return;
+
+    const activeConversation = data.find(
+      (conversation) => conversation.id === activeConversationId,
+    );
+
+    if (!activeConversation || activeConversation.customerId === nextCustomerId) {
+      return;
+    }
+
+    try {
+      await updateAiConversation.mutateAsync({
+        id: activeConversationId,
+        title: activeConversation.title,
+        customerId: nextCustomerId,
+      });
+    } catch {
+      setCustomerId(activeConversation.customerId);
+      setMutationError('Unable to update the customer context. Please try again.');
     }
   }
 
@@ -374,9 +412,12 @@ export function AIPlayground() {
           assistant={assistant}
           model={model}
           temperature={temperature}
+          customerId={customerId}
+          customers={customers}
           onAssistantChange={setAssistant}
           onModelChange={setModel}
           onTemperatureChange={setTemperature}
+          onCustomerChange={handleCustomerChange}
           onClear={handleClear}
           clearDisabled={isStreaming}
         />
