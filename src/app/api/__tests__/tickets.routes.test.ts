@@ -565,6 +565,8 @@ describe('tickets routes', () => {
 
   describe('POST /api/tickets/[id]/restore', () => {
     it('restores the ticket and writes a restored audit log', async () => {
+      await setSession({ ...SESSION_USER, role: 'ADMIN' });
+
       db.ticket.findUnique.mockResolvedValue({ id: 'ticket-1' });
       db.tx.ticket.update.mockResolvedValue(dbTicketRow());
 
@@ -590,6 +592,8 @@ describe('tickets routes', () => {
     });
 
     it('returns 404 when the ticket does not exist', async () => {
+      await setSession({ ...SESSION_USER, role: 'ADMIN' });
+
       db.ticket.findUnique.mockResolvedValue(null);
 
       const response = await restoreTicket(
@@ -600,6 +604,18 @@ describe('tickets routes', () => {
       );
 
       expect(response.status).toBe(404);
+    });
+
+    it('returns 403 for non-admin agents', async () => {
+      const response = await restoreTicket(
+        new Request('http://localhost/api/tickets/ticket-1/restore', {
+          method: 'POST',
+        }),
+        routeContext('ticket-1'),
+      );
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'Forbidden.' });
     });
   });
 });

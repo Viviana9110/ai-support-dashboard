@@ -12,6 +12,18 @@ const minutesAgo = (minutes: number) =>
   new Date(Date.now() - minutes * 60 * 1000);
 
 async function main() {
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!seedPassword || seedPassword.trim() === '') {
+    console.error(
+      'SEED_ADMIN_PASSWORD is required to run the seed. ' +
+        'Set it in your environment before running `prisma db seed`.',
+    );
+    process.exit(1);
+  }
+
+  const password = await bcrypt.hash(seedPassword, 10);
+
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.aiMessage.deleteMany();
@@ -24,8 +36,6 @@ async function main() {
   await prisma.knowledgeArticle.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.user.deleteMany();
-
-  const password = await bcrypt.hash('password123', 10);
 
   const viviana = await prisma.user.create({
     data: { name: 'Viviana', email: 'viviana@aisupport.dev', password, role: 'ADMIN' },

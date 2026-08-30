@@ -132,8 +132,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json(
       serializeAiConversation(conversation),
     );
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error('Failed to rename the conversation.', {
+      id: auth.sub,
+    });
 
     return NextResponse.json(
       { error: 'Failed to rename the conversation.' },

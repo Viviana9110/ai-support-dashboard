@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
@@ -10,32 +10,97 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FormSection } from '@/components/ui/form-section';
 
-import { profileSchema, ProfileFormData } from '@/lib/schemas/profile.schema';
+import {
+  updateProfileSchema,
+  UpdateProfileFormData,
+} from '@/lib/schemas/profile.schema';
 
-import { defaultProfile } from '@/constants/profile';
+import { useSession } from '@/hooks/use-session';
+import { useToast } from '@/hooks/use-toast';
+
+import { updateProfile } from '@/services/auth.service';
 
 import { AvatarUpload } from './avatar-upload';
 import { FormField } from '../ui/form-field';
 
-import { Textarea } from '@/components/ui/textarea';
+function splitName(name: string): {
+  firstName: string;
+  lastName: string;
+} {
+  const parts = name.trim().split(/\s+/);
+
+  return {
+    firstName: parts[0] ?? '',
+    lastName: parts.slice(1).join(' ') ?? '',
+  };
+}
 
 export function ProfileSettings() {
+  const toast = useToast();
+
+  const { data: session, isLoading } = useSession();
+
   const [avatar, setAvatar] = useState<string>();
+  const [isSaving, setIsSaving] = useState(false);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
-  } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: defaultProfile,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<UpdateProfileFormData>({
+    resolver: zodResolver(updateProfileSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+    },
   });
 
-  function onSubmit(data: ProfileFormData) {
-    console.log({
-      ...data,
-      avatar,
+  useEffect(() => {
+    if (!session) return;
+
+    const { firstName, lastName } = splitName(session.name);
+
+    reset({
+      firstName,
+      lastName,
+      email: session.email,
     });
+  }, [session, reset]);
+
+  async function onSubmit(data: UpdateProfileFormData) {
+    setIsSaving(true);
+
+    try {
+      await updateProfile(data);
+
+      toast.success(
+        'Profile updated',
+        'Your profile has been saved.',
+      );
+
+      const { firstName, lastName } = splitName(
+        `${data.firstName} ${data.lastName}`,
+      );
+
+      reset({
+        firstName,
+        lastName,
+        email: data.email,
+      });
+    } catch {
+      toast.error(
+        'Failed to update profile',
+        'Something went wrong while saving your profile.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  if (isLoading) {
+    return <p>Loading...</p>;
   }
 
   return (
@@ -46,7 +111,9 @@ export function ProfileSettings() {
 
       <CardContent>
         <AvatarUpload
-          name={`${defaultProfile.firstName} ${defaultProfile.lastName}`}
+          name={`${splitName(session?.name ?? '').firstName} ${
+            splitName(session?.name ?? '').lastName
+          }`}
           image={avatar}
           onChange={setAvatar}
         />
@@ -85,49 +152,13 @@ export function ProfileSettings() {
             </div>
           </FormSection>
 
-          <FormSection
-            title="Work Information"
-            description="Information related to your current position."
-          >
-            <div className="grid gap-6 md:grid-cols-2">
-              <div>
-                <FormField
-                  label="Company"
-                  required
-                  error={errors.company?.message}
-                >
-                  <Input {...register('company')} />
-                </FormField>
-              </div>
-
-              <div>
-                <FormField label="Role" required error={errors.role?.message}>
-                  <Input {...register('role')} />
-                </FormField>
-              </div>
-            </div>
-
-            <div>
-              <FormField label="Phone" required error={errors.phone?.message}>
-                <Input {...register('phone')} />
-              </FormField>
-            </div>
-          </FormSection>
-
-          <FormSection
-            title="About"
-            description="Tell us a little more about yourself."
-          >
-            <div>
-              <FormField label="Bio" error={errors.bio?.message}>
-                <Textarea rows={5} {...register('bio')} />
-              </FormField>
-            </div>
-          </FormSection>
-
           <div className="flex justify-end">
-            <Button type="submit" size="lg">
-              Save Changes
+            <Button
+              type="submit"
+              size="lg"
+              disabled={!isDirty || isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </form>

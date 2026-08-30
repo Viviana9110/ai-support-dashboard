@@ -154,8 +154,10 @@ export async function POST(request: Request) {
           content: m.content,
         })),
     });
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error('Failed to load the conversation.', {
+      id: auth.sub,
+    });
 
     return NextResponse.json(
       { error: 'Failed to load the conversation.' },
@@ -172,8 +174,10 @@ export async function POST(request: Request) {
     });
 
     assistantText = response.output_text;
-  } catch (error) {
-    console.error(error);
+  } catch {
+    console.error('Unable to generate response.', {
+      id: auth.sub,
+    });
 
     return NextResponse.json(
       { error: 'Unable to generate response.' },
@@ -230,7 +234,9 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error(error);
+    console.error('Failed to save the chat messages.', {
+      id: auth.sub,
+    });
 
     return NextResponse.json(
       { error: 'Failed to save the chat messages.' },

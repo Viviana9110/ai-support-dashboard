@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
-import { requireSession } from '@/lib/require-session';
+import { requireRole } from '@/lib/require-session';
 import { getActorId, writeAuditLog } from '@/lib/audit';
 import { serializeTicket } from '@/lib/serializers';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(_request: Request, context: RouteContext) {
-  const auth = await requireSession();
+  const auth = await requireRole(['ADMIN']);
 
   if (auth instanceof NextResponse) {
     return auth;

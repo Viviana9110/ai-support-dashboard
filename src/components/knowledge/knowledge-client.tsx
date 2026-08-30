@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { BookOpen } from 'lucide-react';
 
@@ -10,7 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Modal } from '@/components/ui/modal';
 
 import { useToast } from '@/hooks/use-toast';
-import { useKnowledge } from '@/hooks/use-knowledge';
+import {
+  useCreateArticle,
+  useDeleteArticle,
+  useKnowledge,
+  useUpdateArticle,
+} from '@/hooks/use-knowledge';
 
 import { KnowledgeToolbar } from './knowledge-toolbar';
 import { KnowledgeStats } from './knowledge-stats';
@@ -21,21 +26,20 @@ import { KnowledgeArticle } from '@/services/knowledge/knowledge.types';
 import { ArticleFormData } from '@/lib/schemas/article.schema';
 
 export function KnowledgeClient() {
-  const { data = [], isLoading } = useKnowledge();
+  const { data: articles = [], isLoading, isError } = useKnowledge();
 
   const toast = useToast();
 
-  const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
+  const createArticle = useCreateArticle();
+  const updateArticle = useUpdateArticle();
+  const deleteArticle = useDeleteArticle();
+
   const [search, setSearch] = useState('');
 
   const [open, setOpen] = useState(false);
 
   const [editingArticle, setEditingArticle] =
     useState<KnowledgeArticle | null>(null);
-
-  useEffect(() => {
-    setArticles(data);
-  }, [data]);
 
   const filteredArticles = useMemo(() => {
     return articles.filter((article) =>
@@ -57,66 +61,98 @@ export function KnowledgeClient() {
     filteredArticles.map((a) => a.category),
   ).size;
 
-  function handleCreate(data: ArticleFormData) {
-    const article: KnowledgeArticle = {
-      id: crypto.randomUUID(),
-      ...data,
-      author: 'Viviana',
-      updatedAt: new Date().toLocaleDateString(),
-      views: 0,
-    };
+  const isPending =
+    createArticle.isPending ||
+    updateArticle.isPending ||
+    deleteArticle.isPending;
 
-    setArticles((previous) => [
-      article,
-      ...previous,
-    ]);
-
-    toast.success(
-      'Article created',
-      'The article has been created.',
-    );
-
-    setOpen(false);
-  }
-
-  function handleEdit(data: ArticleFormData) {
-    if (!editingArticle) return;
-
-    setArticles((previous) =>
-      previous.map((article) =>
-        article.id === editingArticle.id
-          ? {
-              ...article,
-              ...data,
-            }
-          : article,
-      ),
-    );
-
-    toast.info(
-      'Article updated',
-      'Changes have been saved.',
-    );
+  function handleClose() {
+    if (isPending) return;
 
     setEditingArticle(null);
     setOpen(false);
   }
 
-  function handleDelete(id: string) {
-    setArticles((previous) =>
-      previous.filter(
-        (article) => article.id !== id,
-      ),
-    );
+  async function handleCreate(data: ArticleFormData) {
+    try {
+      await createArticle.mutateAsync({
+        title: data.title,
+        slug: data.slug,
+        category: data.category,
+        status: data.status,
+      });
 
-    toast.warning(
-      'Article deleted',
-      'The article has been removed.',
-    );
+      toast.success(
+        'Article created',
+        'The article has been created.',
+      );
+
+      setOpen(false);
+    } catch {
+      toast.error(
+        'Failed to create article',
+        'Something went wrong while creating the article.',
+      );
+    }
+  }
+
+  async function handleEdit(data: ArticleFormData) {
+    if (!editingArticle) return;
+
+    try {
+      await updateArticle.mutateAsync({
+        id: editingArticle.id,
+        payload: {
+          title: data.title,
+          slug: data.slug,
+          category: data.category,
+          status: data.status,
+        },
+      });
+
+      toast.info(
+        'Article updated',
+        'Changes have been saved.',
+      );
+
+      setEditingArticle(null);
+      setOpen(false);
+    } catch {
+      toast.error(
+        'Failed to update article',
+        'Something went wrong while updating the article.',
+      );
+    }
+  }
+
+  async function handleDelete(id: string) {
+    try {
+      await deleteArticle.mutateAsync(id);
+
+      toast.warning(
+        'Article deleted',
+        'The article has been removed.',
+      );
+    } catch {
+      toast.error(
+        'Failed to delete article',
+        'Something went wrong while deleting the article.',
+      );
+    }
   }
 
   if (isLoading) {
     return <p>Loading...</p>;
+  }
+
+  if (isError) {
+    return (
+      <EmptyState
+        icon={BookOpen}
+        title="Something went wrong"
+        description="We could not load the knowledge base. Please try again."
+      />
+    );
   }
 
   return (
@@ -175,18 +211,16 @@ export function KnowledgeClient() {
             ? 'Edit Article'
             : 'New Article'
         }
-        onClose={() => {
-          setEditingArticle(null);
-          setOpen(false);
-        }}
+        onClose={handleClose}
       >
         <ArticleForm
           article={editingArticle ?? undefined}
+          isSubmitting={isPending}
           onSubmit={(data) => {
             if (editingArticle) {
-              handleEdit(data);
+              void handleEdit(data);
             } else {
-              handleCreate(data);
+              void handleCreate(data);
             }
           }}
         />

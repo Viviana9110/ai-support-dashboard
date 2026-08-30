@@ -376,13 +376,15 @@ export async function POST(request: Request) {
               assistantMessage,
             ),
         });
-      } catch (error) {
+      } catch {
         if (abortController.signal.aborted) {
           if (timedOut) {
             sendError();
           }
         } else {
-          console.error(error);
+          console.error('OpenAI stream failed.', {
+            id: auth.sub,
+          });
           sendError();
         }
       } finally {

@@ -17,6 +17,8 @@ import { defaultSecurity } from '@/constants/security';
 import { PasswordStrength } from './password-strength';
 
 import { useToast } from '@/hooks/use-toast';
+import { getApiErrorMessage } from '@/services/api';
+import { updatePassword } from '@/services/auth.service';
 
 export function PasswordSettings() {
   const toast = useToast();
@@ -36,15 +38,28 @@ export function PasswordSettings() {
     defaultValues: defaultSecurity,
   });
 
-  function onSubmit(data: SecurityFormData) {
-    console.log(data);
+  async function onSubmit(data: SecurityFormData) {
+    try {
+      await updatePassword({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+      });
 
-    toast.success(
-      'Password updated',
-      'Your password has been changed successfully.',
-    );
+      toast.success(
+        'Password updated',
+        'Your password has been changed successfully.',
+      );
 
-    reset(defaultSecurity);
+      reset(defaultSecurity);
+    } catch (error) {
+      toast.error(
+        'Failed to update password',
+        getApiErrorMessage(
+          error,
+          'Something went wrong while updating your password.',
+        ),
+      );
+    }
   }
 
   const password = watch('newPassword');

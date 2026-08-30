@@ -19,6 +19,8 @@ import { KnowledgeArticle } from '@/services/knowledge/knowledge.types';
 interface Props {
   article?: KnowledgeArticle;
 
+  isSubmitting?: boolean;
+
   onSubmit: (
     data: ArticleFormData,
   ) => void;
@@ -26,6 +28,7 @@ interface Props {
 
 export function ArticleForm({
   article,
+  isSubmitting = false,
   onSubmit,
 }: Props) {
   const {
@@ -73,13 +76,7 @@ export function ArticleForm({
     <form
   onSubmit={handleSubmit(
     (data) => {
-      console.log("✅ Form submitted");
-      console.log(data);
       onSubmit(data);
-    },
-    (errors) => {
-      console.log("❌ Validation errors");
-      console.log(errors);
     },
   )}
   className="space-y-6"
@@ -148,7 +145,7 @@ export function ArticleForm({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit">
+        <Button type="submit" disabled={isSubmitting}>
           Save Article
         </Button>
       </div>

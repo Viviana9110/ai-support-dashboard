@@ -11,6 +11,17 @@ import { AuthLayout } from '@/components/auth/auth-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
+function getSafeRedirect(value: string | null): string {
+  if (!value) return '/dashboard';
+
+  const isRelativePath =
+    value.startsWith('/') &&
+    !value.startsWith('//') &&
+    !value.startsWith('/\\');
+
+  return isRelativePath ? value : '/dashboard';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -34,7 +45,7 @@ export default function LoginPage() {
       await queryClient.invalidateQueries({ queryKey: ['session'] });
 
       const params = new URLSearchParams(window.location.search);
-      const next = params.get('next') || '/dashboard';
+      const next = getSafeRedirect(params.get('next'));
 
       router.push(next);
       router.refresh();
@@ -102,11 +113,6 @@ export default function LoginPage() {
           <a href="/register" className="font-medium text-primary hover:underline">
             Register
           </a>
-        </p>
-
-        <p className="rounded-lg border border-border bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-          Demo: <span className="font-medium">viviana@aisupport.dev</span> /{' '}
-          <span className="font-medium">password123</span>
         </p>
       </form>
     </AuthLayout>

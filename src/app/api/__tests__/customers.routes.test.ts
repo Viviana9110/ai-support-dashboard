@@ -364,6 +364,8 @@ describe('customers routes', () => {
 
   describe('POST /api/customers/[id]/restore', () => {
     it('restores the customer and writes a restored audit log', async () => {
+      await setSession({ ...SESSION_USER, role: 'ADMIN' });
+
       db.customer.findUnique.mockResolvedValue({ id: CUSTOMER_ID, name: 'Acme Inc' });
       db.tx.customer.update.mockResolvedValue(dbCustomerRow());
 
@@ -388,6 +390,8 @@ describe('customers routes', () => {
     });
 
     it('returns 404 when the customer is not found', async () => {
+      await setSession({ ...SESSION_USER, role: 'ADMIN' });
+
       db.customer.findUnique.mockResolvedValue(null);
 
       const response = await restoreCustomer(
