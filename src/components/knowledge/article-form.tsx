@@ -53,7 +53,7 @@ export function ArticleForm({
       slug: article.slug,
       category: article.category,
       status: article.status,
-      summary: '',
+      summary: article.summary ?? '',
       tags: [],
     });
   }, [article, reset]);

@@ -80,6 +80,7 @@ export function KnowledgeClient() {
         slug: data.slug,
         category: data.category,
         status: data.status,
+        summary: data.summary,
       });
 
       toast.success(
@@ -107,6 +108,7 @@ export function KnowledgeClient() {
           slug: data.slug,
           category: data.category,
           status: data.status,
+          summary: data.summary,
         },
       });
 

@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       title: data.title,
       slug: data.slug ?? slugify(data.title),
       category: data.category,
+      summary: data.summary ?? null,
       status,
       content: data.content ?? '',
       views: data.views ?? 0,

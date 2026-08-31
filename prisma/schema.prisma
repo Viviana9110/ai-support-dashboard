@@ -166,6 +166,7 @@ model KnowledgeArticle {
   title       String
   slug        String        @unique
   category    String
+  summary     String?
   status      ArticleStatus @default(DRAFT)
   content     String
   views       Int           @default(0)

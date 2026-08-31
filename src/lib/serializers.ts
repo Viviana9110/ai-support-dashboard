@@ -261,26 +261,28 @@ export function serializeConversationDetail(
 }
 
 export function serializeArticle(dbArticle: {
-  id: string;
-  title: string;
-  slug: string;
-  category: string;
-  status: DBArticleStatus;
-  author: { name: string };
-  updatedAt: Date;
-  views: number;
-}): KnowledgeArticle {
-  return {
-    id: dbArticle.id,
-    title: dbArticle.title,
-    slug: dbArticle.slug,
-    category: dbArticle.category,
-    status: ARTICLE_STATUS[dbArticle.status],
-    author: dbArticle.author.name,
-    updatedAt: formatDate(dbArticle.updatedAt),
-    views: dbArticle.views,
-  };
-}
+    id: string;
+    title: string;
+    slug: string;
+    category: string;
+    summary: string | null;
+    status: DBArticleStatus;
+    author: { name: string };
+    updatedAt: Date;
+    views: number;
+  }): KnowledgeArticle {
+    return {
+      id: dbArticle.id,
+      title: dbArticle.title,
+      slug: dbArticle.slug,
+      category: dbArticle.category,
+      summary: dbArticle.summary,
+      status: ARTICLE_STATUS[dbArticle.status],
+      author: dbArticle.author.name,
+      updatedAt: formatDate(dbArticle.updatedAt),
+      views: dbArticle.views,
+    };
+  }
 
 export interface AiConversationSummary {
   id: string;

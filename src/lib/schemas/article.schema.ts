@@ -55,6 +55,13 @@ export const knowledgeArticleCreateSchema = z.object({
     .min(1, 'Category is required')
     .max(100, 'Category must be 100 characters or less'),
 
+  summary: z
+    .string()
+    .trim()
+    .min(10, 'Summary must be at least 10 characters')
+    .max(500, 'Summary must be 500 characters or less')
+    .optional(),
+
   status: z
     .string()
     .trim()

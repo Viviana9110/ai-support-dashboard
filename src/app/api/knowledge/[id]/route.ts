@@ -98,6 +98,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       ...(data.title !== undefined && { title: data.title }),
       ...(data.slug !== undefined && { slug: data.slug }),
       ...(data.category !== undefined && { category: data.category }),
+      ...(data.summary !== undefined && { summary: data.summary }),
       ...(normalizedStatus !== undefined && {
         status: normalizedStatus,
         publishedAt:

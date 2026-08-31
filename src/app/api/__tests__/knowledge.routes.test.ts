@@ -58,6 +58,7 @@ describe('knowledge routes', () => {
         title: 'How to reset your password',
         slug: 'how-to-reset-your-password',
         category: 'Accounts',
+        summary: null,
         status: 'draft',
         author: 'Viviana',
         updatedAt: expect.any(String),
@@ -96,6 +97,7 @@ describe('knowledge routes', () => {
           title: 'How to Reset Password!',
           slug: 'how-to-reset-password',
           category: 'Accounts',
+          summary: null,
           status: 'DRAFT',
           content: '',
           views: 0,
@@ -171,6 +173,34 @@ describe('knowledge routes', () => {
       );
     });
 
+    it('persists the summary when provided', async () => {
+      db.knowledgeArticle.create.mockResolvedValue(
+        dbArticleRow({ summary: 'A short summary of the article.' }),
+      );
+
+      const response = await createArticle(
+        makeRequest('http://localhost/api/knowledge', {
+          method: 'POST',
+          body: {
+            title: 'How to reset your password',
+            category: 'Accounts',
+            summary: 'A short summary of the article.',
+          },
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      expect(await response.json()).toMatchObject({
+        summary: 'A short summary of the article.',
+      });
+
+      expect(db.knowledgeArticle.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ summary: 'A short summary of the article.' }),
+        }),
+      );
+    });
+
     it('rejects a payload without a title', async () => {
       const response = await createArticle(
         makeRequest('http://localhost/api/knowledge', {
@@ -234,6 +264,32 @@ describe('knowledge routes', () => {
       expect(db.knowledgeArticle.update).toHaveBeenCalledWith({
         where: { id: 'article-1' },
         data: { title: 'Updated title' },
+        include: { author: true },
+      });
+    });
+
+    it('updates the summary', async () => {
+      db.knowledgeArticle.findUnique.mockResolvedValue({ id: 'article-1' });
+      db.knowledgeArticle.update.mockResolvedValue(
+        dbArticleRow({ summary: 'Updated summary text.' }),
+      );
+
+      const response = await updateArticle(
+        makeRequest('http://localhost/api/knowledge/article-1', {
+          method: 'PATCH',
+          body: { summary: 'Updated summary text.' },
+        }),
+        routeContext('article-1'),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        summary: 'Updated summary text.',
+      });
+
+      expect(db.knowledgeArticle.update).toHaveBeenCalledWith({
+        where: { id: 'article-1' },
+        data: { summary: 'Updated summary text.' },
         include: { author: true },
       });
     });
