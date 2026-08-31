@@ -221,7 +221,7 @@ export async function POST(request: Request) {
               orderBy: {
                 updatedAt: 'desc',
               },
-              take: 5,
+              take: 50,
               select: {
                 title: true,
                 category: true,

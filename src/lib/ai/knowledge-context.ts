@@ -5,8 +5,12 @@ type KnowledgeContextArticle = {
 };
 
 function normalizeTerms(value: string): string[] {
-  return value
+  const normalized = value
     .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  return normalized
     .split(/[^a-z0-9]+/)
     .filter((term) => term.length >= 3);
 }

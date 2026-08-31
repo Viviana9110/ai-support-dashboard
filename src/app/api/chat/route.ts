@@ -123,7 +123,7 @@ export async function POST(request: Request) {
       prisma.knowledgeArticle.findMany({
         where: { status: 'PUBLISHED', deletedAt: null },
         orderBy: { updatedAt: 'desc' },
-        take: 5,
+        take: 50,
         select: { title: true, category: true, content: true },
       }),
     ]);
