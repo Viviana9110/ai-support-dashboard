@@ -3,7 +3,7 @@ import type { KnowledgeArticle } from './knowledge.types';
 
 export type CreateArticlePayload = Pick<
   KnowledgeArticle,
-  'title' | 'slug' | 'category' | 'status' | 'summary'
+  'title' | 'slug' | 'category' | 'status' | 'summary' | 'content'
 >;
 
 export type UpdateArticlePayload = Partial<CreateArticlePayload>;

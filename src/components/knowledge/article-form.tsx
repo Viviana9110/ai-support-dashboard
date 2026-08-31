@@ -54,6 +54,7 @@ export function ArticleForm({
       category: article.category,
       status: article.status,
       summary: article.summary ?? '',
+      content: article.content ?? '',
       tags: [],
     });
   }, [article, reset]);
@@ -140,6 +141,18 @@ export function ArticleForm({
         <textarea
           {...register('summary')}
           rows={4}
+          className="border-border bg-background w-full rounded-lg border p-3"
+        />
+      </div>
+
+      <div>
+        <label className="mb-2 block text-sm font-medium">
+          Content
+        </label>
+
+        <textarea
+          {...register('content')}
+          rows={8}
           className="border-border bg-background w-full rounded-lg border p-3"
         />
       </div>

@@ -266,6 +266,7 @@ export function serializeArticle(dbArticle: {
     slug: string;
     category: string;
     summary: string | null;
+    content: string | null;
     status: DBArticleStatus;
     author: { name: string };
     updatedAt: Date;
@@ -277,6 +278,7 @@ export function serializeArticle(dbArticle: {
       slug: dbArticle.slug,
       category: dbArticle.category,
       summary: dbArticle.summary,
+      content: dbArticle.content,
       status: ARTICLE_STATUS[dbArticle.status],
       author: dbArticle.author.name,
       updatedAt: formatDate(dbArticle.updatedAt),

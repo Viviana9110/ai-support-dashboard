@@ -6,5 +6,6 @@ export const defaultArticle: ArticleFormData = {
   category: '',
   status: 'draft',
   summary: '',
+  content: '',
   tags: [],
 };

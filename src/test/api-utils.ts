@@ -345,6 +345,7 @@ export function dbArticleRow(overrides: Record<string, unknown> = {}) {
     slug: 'how-to-reset-your-password',
     category: 'Accounts',
     summary: null,
+    content: null,
     status: 'DRAFT',
     author: { name: 'Viviana' },
     updatedAt: minutesAgo(60),

@@ -81,6 +81,7 @@ export function KnowledgeClient() {
         category: data.category,
         status: data.status,
         summary: data.summary,
+        content: data.content,
       });
 
       toast.success(
@@ -109,6 +110,7 @@ export function KnowledgeClient() {
           category: data.category,
           status: data.status,
           summary: data.summary,
+          content: data.content,
         },
       });
 

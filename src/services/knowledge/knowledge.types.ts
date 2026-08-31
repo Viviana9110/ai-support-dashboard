@@ -9,6 +9,7 @@ export interface KnowledgeArticle {
   slug: string;
   category: string;
   summary: string | null;
+  content: string | null;
   status: ArticleStatus;
   author: string;
   updatedAt: string;

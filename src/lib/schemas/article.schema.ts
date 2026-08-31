@@ -27,6 +27,11 @@ export const articleSchema = z.object({
     .min(10)
     .max(500, 'Summary must be 500 characters or less'),
 
+  content: z
+    .string()
+    .min(10, 'Content is required')
+    .max(20_000, 'Content must be 20,000 characters or less'),
+
   tags: z
     .array(z.string().max(50, 'Tags must be 50 characters or less'))
     .max(20, 'Too many tags'),

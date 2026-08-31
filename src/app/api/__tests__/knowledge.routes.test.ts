@@ -59,6 +59,7 @@ describe('knowledge routes', () => {
         slug: 'how-to-reset-your-password',
         category: 'Accounts',
         summary: null,
+        content: null,
         status: 'draft',
         author: 'Viviana',
         updatedAt: expect.any(String),
@@ -201,6 +202,34 @@ describe('knowledge routes', () => {
       );
     });
 
+    it('persists the content when provided', async () => {
+      db.knowledgeArticle.create.mockResolvedValue(
+        dbArticleRow({ content: 'Full article body content.' }),
+      );
+
+      const response = await createArticle(
+        makeRequest('http://localhost/api/knowledge', {
+          method: 'POST',
+          body: {
+            title: 'How to reset your password',
+            category: 'Accounts',
+            content: 'Full article body content.',
+          },
+        }),
+      );
+
+      expect(response.status).toBe(201);
+      expect(await response.json()).toMatchObject({
+        content: 'Full article body content.',
+      });
+
+      expect(db.knowledgeArticle.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ content: 'Full article body content.' }),
+        }),
+      );
+    });
+
     it('rejects a payload without a title', async () => {
       const response = await createArticle(
         makeRequest('http://localhost/api/knowledge', {
@@ -216,7 +245,9 @@ describe('knowledge routes', () => {
 
   describe('GET /api/knowledge/[id]', () => {
     it('returns the article detail', async () => {
-      db.knowledgeArticle.findUnique.mockResolvedValue(dbArticleRow());
+      db.knowledgeArticle.findUnique.mockResolvedValue(
+        dbArticleRow({ content: 'Full article body content.' }),
+      );
 
       const response = await getArticle(
         new Request('http://localhost/api/knowledge/article-1'),
@@ -224,7 +255,10 @@ describe('knowledge routes', () => {
       );
 
       expect(response.status).toBe(200);
-      expect(await response.json()).toMatchObject({ id: 'article-1' });
+      expect(await response.json()).toMatchObject({
+        id: 'article-1',
+        content: 'Full article body content.',
+      });
       expect(db.knowledgeArticle.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: 'article-1', deletedAt: null } }),
       );
@@ -290,6 +324,32 @@ describe('knowledge routes', () => {
       expect(db.knowledgeArticle.update).toHaveBeenCalledWith({
         where: { id: 'article-1' },
         data: { summary: 'Updated summary text.' },
+        include: { author: true },
+      });
+    });
+
+    it('updates the content', async () => {
+      db.knowledgeArticle.findUnique.mockResolvedValue({ id: 'article-1' });
+      db.knowledgeArticle.update.mockResolvedValue(
+        dbArticleRow({ content: 'Updated article body content.' }),
+      );
+
+      const response = await updateArticle(
+        makeRequest('http://localhost/api/knowledge/article-1', {
+          method: 'PATCH',
+          body: { content: 'Updated article body content.' },
+        }),
+        routeContext('article-1'),
+      );
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        content: 'Updated article body content.',
+      });
+
+      expect(db.knowledgeArticle.update).toHaveBeenCalledWith({
+        where: { id: 'article-1' },
+        data: { content: 'Updated article body content.' },
         include: { author: true },
       });
     });
